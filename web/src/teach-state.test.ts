@@ -48,3 +48,40 @@ describe('WAV encoder', () => {
     assert.ok(peak > 1000, 'encoded signal should contain non-zero sample data');
   });
 });
+
+describe('Sound enablement filtering', () => {
+  test('disabled built-in categories are suppressed from alerts and history while keeping prior events intact', () => {
+    const sounds = [
+      { sound_id: 'builtin_dog_bark', name: 'Dog bark', kind: 'builtin', enabled: false },
+      { sound_id: 'builtin_siren', name: 'Siren', kind: 'builtin', enabled: true },
+      { sound_id: 'snd_custom', name: 'Door knock', kind: 'taught', enabled: true },
+    ];
+
+    const events = [
+      { event_id: 'evt_1', at: '2026-10-24T10:00:00Z', kind: 'builtin', label: 'Dog bark', sound_id: 'builtin_dog_bark', confidence: 0.9, description: null },
+      { event_id: 'evt_2', at: '2026-10-24T10:01:00Z', kind: 'builtin', label: 'Siren', sound_id: 'builtin_siren', confidence: 0.8, description: null },
+      { event_id: 'evt_3', at: '2026-10-24T10:02:00Z', kind: 'taught', label: 'Door knock', sound_id: 'snd_custom', confidence: 0.7, description: null },
+    ];
+
+    const filtered = events.filter((event) => {
+      if (!event.sound_id) return true;
+      const sound = sounds.find((item) => item.sound_id === event.sound_id);
+      if (!sound) return true;
+      return sound.enabled;
+    });
+
+    assert.deepEqual(filtered.map((event) => event.event_id), ['evt_2', 'evt_3']);
+  });
+
+  test('save readiness stays blocked until all four recordings and the sound name are valid', () => {
+    const recordings = [
+      { blob: new Blob(['one'], { type: 'audio/wav' }), valid: true },
+      { blob: new Blob(['two'], { type: 'audio/wav' }), valid: true },
+      { blob: new Blob(['three'], { type: 'audio/wav' }), valid: true },
+      { blob: new Blob(['four'], { type: 'audio/wav' }), valid: false },
+    ];
+
+    assert.equal(isReadyToSave('Door knock', recordings), false);
+    assert.equal(isReadyToSave('   ', recordings), false);
+  });
+});

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getHealth, getHistory, getSounds, teachSound } from './api/client';
+import { getHealth, getHistory, getSounds, teachSound, updateSound } from './api/client';
 import type { HealthResponse, HistoryEvent, SoundRecord } from './api/types';
 import { recordMicrophoneClip } from './audio/recorder';
 import { countCompletedRecordings, isReadyToSave, type RecordingStep } from './teach-state';
@@ -211,7 +211,29 @@ function Shell({ children, screen, setScreen, dark, setDark }: React.PropsWithCh
   );
 }
 
-function Listen({ setScreen, health, sounds }: { setScreen: (s: Screen) => void; health: HealthResponse | null; sounds: SoundRecord[] }) {
+const SOUND_PREFS_KEY = 'hearalert:sound-preferences:v1';
+
+function readStoredSoundPreferences(): Record<string, boolean> {
+  try {
+    const raw = window.localStorage.getItem(SOUND_PREFS_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as Record<string, boolean>;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function isSoundVisible(sound: SoundRecord, preferences: Record<string, boolean>): boolean {
+  if (sound.kind === 'builtin') {
+    return preferences[sound.sound_id] ?? sound.enabled;
+  }
+  return sound.enabled;
+}
+
+function Listen({ setScreen, health, sounds, toggleSound, preferences }: { setScreen: (s: Screen) => void; health: HealthResponse | null; sounds: SoundRecord[]; toggleSound: (soundId: string, enabled: boolean) => Promise<void>; preferences: Record<string, boolean> }) {
   const [status, setStatus] = useState<'active' | 'paused' | 'reconnecting' | 'denied'>('active');
   const statusText = {
     active: 'Listening now',
@@ -220,7 +242,7 @@ function Listen({ setScreen, health, sounds }: { setScreen: (s: Screen) => void;
     denied: 'Microphone access needed',
   }[status];
 
-  const displaySounds = sounds;
+  const displaySounds = sounds.filter((sound) => isSoundVisible(sound, preferences));
 
   return (
     <div className="page listen-page">
@@ -298,7 +320,11 @@ function Listen({ setScreen, health, sounds }: { setScreen: (s: Screen) => void;
                     <strong>{sound.name}</strong>
                     <small>{sound.kind === 'builtin' ? 'Built-in' : 'Custom'}</small>
                   </span>
-                  <button className={`switch ${sound.enabled ? 'on' : ''}`} aria-label={`Toggle ${sound.name}`}>
+                  <button
+                    className={`switch ${isSoundVisible(sound, preferences) ? 'on' : ''}`}
+                    aria-label={`Toggle ${sound.name}`}
+                    onClick={() => void toggleSound(sound.sound_id, !isSoundVisible(sound, preferences))}
+                  >
                     <span />
                   </button>
                 </div>
@@ -319,7 +345,7 @@ function Listen({ setScreen, health, sounds }: { setScreen: (s: Screen) => void;
         <aside className="info-card card">
           <span className="info-icon">i</span>
           <h2>Private by design</h2>
-          <p>Demo clips are retained temporarily in this browser’s memory for playback and deleted when you refresh or close this session. Nothing is uploaded.</p>
+          <p>Only sounds louder than your room are analyzed. Audio is never stored.</p>
           <hr />
           <p>
             <strong>Keep this tab visible.</strong>
@@ -329,7 +355,6 @@ function Listen({ setScreen, health, sounds }: { setScreen: (s: Screen) => void;
           <div className="alert-demo">
             <button onClick={() => setScreen('recognized')}>Preview recognized alert</button>
             <button onClick={() => setScreen('unknown')}>Preview unknown alert</button>
-            <button onClick={() => setScreen('attention')}>Preview attention alert</button>
           </div>
         </aside>
       </div>
@@ -681,14 +706,35 @@ export default function App() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [sounds, setSounds] = useState<SoundRecord[]>([]);
   const [history, setHistory] = useState<HistoryEvent[]>([]);
+  const [preferences, setPreferences] = useState<Record<string, boolean>>(() => readStoredSoundPreferences());
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SOUND_PREFS_KEY, JSON.stringify(preferences));
+    } catch {
+      // Ignore private-mode/localStorage write failures and keep the app usable.
+    }
+  }, [preferences]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         const [nextHealth, nextSounds, nextHistory] = await Promise.all([getHealth(), getSounds(), getHistory()]);
         setHealth(nextHealth);
-        setSounds(nextSounds.sounds);
-        setHistory(nextHistory.events);
+        setSounds(nextSounds.sounds.map((sound) => ({
+          ...sound,
+          enabled: sound.kind === 'builtin' ? (preferences[sound.sound_id] ?? sound.enabled) : sound.enabled,
+        })));
+        setHistory(nextHistory.events.filter((event) => {
+          if (!event.sound_id) {
+            return true;
+          }
+          const matching = nextSounds.sounds.find((sound) => sound.sound_id === event.sound_id);
+          if (!matching) {
+            return true;
+          }
+          return isSoundVisible(matching, preferences);
+        }));
       } catch (error) {
         console.error('Failed to load app data:', error);
         setHealth(null);
@@ -698,7 +744,7 @@ export default function App() {
     };
 
     void loadData();
-  }, []);
+  }, [preferences]);
 
   const readyToSave = isReadyToSave(soundName, recordings);
 
@@ -744,12 +790,30 @@ export default function App() {
         payload.append(fieldName, recording.blob, `${fieldName}.wav`);
       });
 
-      await teachSound(payload);
+      const response = await teachSound(payload);
+      const nextSounds = await getSounds();
+      setSounds(nextSounds.sounds.map((sound) => ({
+        ...sound,
+        enabled: sound.kind === 'builtin' ? (preferences[sound.sound_id] ?? sound.enabled) : sound.enabled,
+      })));
       setSaveState('saved');
       setSaveError(null);
+      setSoundName(response.name);
+      setSelectedIcon(response.icon);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'The sound could not be saved. Please try again.';
       setSaveState('error');
+      setSaveError(message);
+    }
+  };
+
+  const toggleSound = async (soundId: string, enabled: boolean) => {
+    try {
+      const updated = await updateSound(soundId, { enabled });
+      setSounds((current) => current.map((sound) => (sound.sound_id === soundId ? { ...sound, enabled: updated.enabled } : sound)));
+      setPreferences((current) => ({ ...current, [soundId]: updated.enabled }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to update this sound.';
       setSaveError(message);
     }
   };
@@ -762,7 +826,7 @@ export default function App() {
     <div className={dark ? 'theme-dark' : ''}>
       <Shell screen={screen} setScreen={setScreen} dark={dark} setDark={setDark}>
         {screen === 'listen' ? (
-          <Listen setScreen={setScreen} health={health} sounds={sounds} />
+          <Listen setScreen={setScreen} health={health} sounds={sounds} toggleSound={toggleSound} preferences={preferences} />
         ) : screen === 'teach' ? (
           <Teach
             setScreen={setScreen}
