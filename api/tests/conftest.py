@@ -8,6 +8,7 @@ import soundfile as sf
 from fastapi.testclient import TestClient
 
 from app import gemini, ratelimit, store
+from app.errors import UpstreamError
 from app.main import app
 
 
@@ -25,6 +26,16 @@ def make_wav(
     buf = io.BytesIO()
     sf.write(buf, data, rate, format="WAV", subtype=subtype)
     return buf.getvalue()
+
+
+@pytest.fixture(autouse=True)
+def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Any Gemini call a test didn't fake fails like an outage instead of reaching the network."""
+
+    def offline() -> None:
+        raise UpstreamError("Network is disabled in tests.")
+
+    monkeypatch.setattr(gemini, "_get_client", offline)
 
 
 @pytest.fixture(autouse=True)

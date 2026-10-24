@@ -8,7 +8,7 @@ from app.errors import RateLimited, UpstreamError
 from tests.conftest import make_wav
 
 
-def post_detect(client: TestClient, wav: bytes, level_db: str | None = "-12.5") -> httpx.Response:
+def post_detect(client: TestClient, wav: bytes, level_db: str | None = "-40") -> httpx.Response:
     data = {"level_db": level_db} if level_db is not None else {}
     return client.post(
         "/api/detect", files={"clip": ("clip.wav", wav, "audio/wav")}, data=data
