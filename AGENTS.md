@@ -75,9 +75,9 @@ Contrast at least 4.5:1, tap targets at least 48 px, respects `prefers-reduced-m
 ## 9. Git workflow
 
 - Branch per person: `p1/<feature>`, `p2/<feature>`, `p3/<feature>`, `p4/<feature>`.
-- Never push to `main` directly. Open a PR, then merge it yourself with **Create a merge commit** (not squash) once it is ready:
-  - `api/` or `eval/`: `uv run pytest` passes.
-  - `web/`: `npm run build` passes.
+- Never push to `main` directly (GitHub blocks it). Open a PR, then merge it yourself with **Create a merge commit** (not squash) once it is ready:
+  - CI is green. `.github/workflows/ci.yml` runs `uv run pytest` in `api/`, `npm ci && npm run build` in `web/`, and blocks committed audio, databases, `.env` files and API keys. Run the same commands locally first.
+  - `web/package-lock.json` and `api/uv.lock` are committed and up to date (CI installs from them).
   - Root `.md` files (including `CONTRACT.md`): approved by one of P1, P2 or P3 who is not the author. `CONTRACT.md` still needs both P1 and P2.
   - Touches a folder you don't own: approved by that folder's owner.
 - Commit messages: `area: what changed`, for example `api: add /teach endpoint`, `web: alert screen flash`.
