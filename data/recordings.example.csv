@@ -1,0 +1,5 @@
+clip_id,path,label,source,fold,recorded_at,device
+bell_001,data/raw/ours/bell_001.wav,desk_bell,ours,,2026-10-24T08:00:00-04:00,REPLACE_WITH_DEVICE
+knock_001,data/raw/ours/knock_001.wav,builtin_door_knock,ours,,2026-10-24T08:01:00-04:00,REPLACE_WITH_DEVICE
+appliance_001,data/raw/ours/appliance_001.wav,appliance_beep,ours,,2026-10-24T08:02:00-04:00,REPLACE_WITH_DEVICE
+background_001,data/raw/ours/background_001.wav,background,ours,,2026-10-24T08:03:00-04:00,REPLACE_WITH_DEVICE
