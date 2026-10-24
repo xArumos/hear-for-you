@@ -21,17 +21,23 @@ def ok_response(values: list[float]) -> types.EmbedContentResponse:
 
 
 class FakeModels:
-    def __init__(self, outcomes: list[Callable[[], types.EmbedContentResponse]]) -> None:
+    def __init__(self, outcomes: list[Callable[[], object]]) -> None:
         self.outcomes = outcomes
         self.calls: list[dict[str, object]] = []
 
-    def embed_content(self, **kwargs: object) -> types.EmbedContentResponse:
+    def _next(self, kwargs: dict[str, object]) -> object:
         self.calls.append(kwargs)
         return self.outcomes[len(self.calls) - 1]()
 
+    def embed_content(self, **kwargs: object) -> object:
+        return self._next(kwargs)
+
+    def generate_content(self, **kwargs: object) -> object:
+        return self._next(kwargs)
+
 
 def install_fake(
-    monkeypatch: pytest.MonkeyPatch, outcomes: list[Callable[[], types.EmbedContentResponse]]
+    monkeypatch: pytest.MonkeyPatch, outcomes: list[Callable[[], object]]
 ) -> FakeModels:
     models = FakeModels(outcomes)
     monkeypatch.setattr(gemini, "_get_client", lambda: SimpleNamespace(models=models))
@@ -39,8 +45,8 @@ def install_fake(
     return models
 
 
-def raises(exc: Exception) -> Callable[[], types.EmbedContentResponse]:
-    def fn() -> types.EmbedContentResponse:
+def raises(exc: Exception) -> Callable[[], object]:
+    def fn() -> object:
         raise exc
 
     return fn
@@ -96,3 +102,39 @@ def test_empty_embedding_is_upstream_error(monkeypatch: pytest.MonkeyPatch) -> N
     install_fake(monkeypatch, [lambda: types.EmbedContentResponse(embeddings=[])])
     with pytest.raises(UpstreamError):
         gemini.embed_audio(b"wav")
+
+
+def text_response(text: str) -> types.GenerateContentResponse:
+    return types.GenerateContentResponse(
+        candidates=[types.Candidate(content=types.Content(role="model", parts=[types.Part(text=text)]))]
+    )
+
+
+def test_describe_sends_prompt_and_audio(monkeypatch: pytest.MonkeyPatch) -> None:
+    models = install_fake(monkeypatch, [lambda: text_response(" A dog barking outside.\n")])
+    assert gemini.describe_audio(b"wav") == "A dog barking outside."
+    call = models.calls[0]
+    assert call["model"] == "gemini-3.8-flash"
+    prompt, part = call["contents"]  # type: ignore[misc]
+    assert prompt == gemini.DESCRIBE_PROMPT
+    assert part.inline_data.mime_type == "audio/wav" and part.inline_data.data == b"wav"
+
+
+def test_describe_truncates_long_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    long = "A very loud metal pot falling onto a hard kitchen floor and bouncing several times"
+    install_fake(monkeypatch, [lambda: text_response(long)])
+    text = gemini.describe_audio(b"wav")
+    assert text is not None and len(text) < 80 and text.endswith("…")
+    assert text.startswith("A very loud metal pot")
+
+
+@pytest.mark.parametrize(
+    "outcomes",
+    [[raises(api_error(429)), raises(api_error(429))], [raises(api_error(400))], [lambda: text_response("  ")]],
+    ids=["rate_limited", "bad_request", "empty"],
+)
+def test_describe_failure_returns_none(
+    monkeypatch: pytest.MonkeyPatch, outcomes: list[Callable[[], object]]
+) -> None:
+    install_fake(monkeypatch, outcomes)
+    assert gemini.describe_audio(b"wav") is None

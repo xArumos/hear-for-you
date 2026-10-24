@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, Form, Query, Request, Response, UploadFile
 from pydantic import BaseModel
 
-from app import audio, gemini, ratelimit, store, teach
+from app import audio, detectors, ratelimit, store, teach
 from app.config import settings
 from app.errors import BadRequest, install_handlers
 
@@ -63,18 +63,10 @@ def detect(
     ratelimit.detect_limiter.check()
     data = clip.file.read()
     audio.validate_clip(data)
-    gemini.embed_audio(data)
-    # Detectors (taught, built-in, unknown) are not wired yet; every clip is "none" for now.
-    request.state.kind = "none"
-    return {
-        "event_id": store.new_id("evt"),
-        "kind": "none",
-        "label": None,
-        "sound_id": None,
-        "confidence": None,
-        "description": None,
-        "latency_ms": round((time.perf_counter() - start) * 1000),
-    }
+    event = detectors.detect(data, level_db)
+    request.state.kind = event["kind"]
+    event.pop("at", None)
+    return {**event, "latency_ms": _ms(start)}
 
 
 @app.post("/api/teach")

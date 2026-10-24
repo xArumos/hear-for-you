@@ -11,13 +11,19 @@ from google import genai
 from google.genai import errors, types
 
 from app.config import settings
-from app.errors import RateLimited, UpstreamError
+from app.errors import ApiError, RateLimited, UpstreamError
 
 log = logging.getLogger("hearalert.gemini")
 
 TIMEOUT_MS = 10_000
 RETRY_DELAY_S = 0.5
 DEFAULT_RETRY_AFTER_MS = 1_000
+
+DESCRIBE_PROMPT = (
+    "Describe this sound in one short, plain sentence for someone who cannot hear it. "
+    "Name the likely source. No preamble."
+)
+MAX_DESCRIPTION_CHARS = 80
 
 T = TypeVar("T")
 
@@ -83,3 +89,31 @@ def embed_audio(wav: bytes) -> np.ndarray:
     if norm == 0.0:
         raise UpstreamError("Gemini returned a zero embedding.")
     return vector / norm
+
+
+def _shorten(text: str) -> str:
+    """One line, under MAX_DESCRIPTION_CHARS; cut at a word boundary and add an ellipsis if needed."""
+    line = " ".join(text.split())
+    if len(line) < MAX_DESCRIPTION_CHARS:
+        return line
+    cut = line[: MAX_DESCRIPTION_CHARS - 2].rsplit(" ", 1)[0].rstrip(" ,;:.")
+    return cut + "…"
+
+
+def describe_audio(wav: bytes) -> str | None:
+    """One plain sentence about an unknown sound from gemini-3.8-flash, or None if the call fails."""
+    try:
+        client = _get_client()
+
+        def call() -> types.GenerateContentResponse:
+            return client.models.generate_content(
+                model=settings.describe_model,
+                contents=[DESCRIBE_PROMPT, types.Part.from_bytes(data=wav, mime_type="audio/wav")],
+            )
+
+        response = _call_with_retry(call)
+    except ApiError as exc:
+        log.warning("describe failed: %s", exc.code)
+        return None
+    text = (response.text or "").strip()
+    return _shorten(text) if text else None
