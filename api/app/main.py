@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, Form, Query, Request, Response, UploadFile
 from pydantic import BaseModel
 
-from app import audio, gemini, ratelimit, store
+from app import audio, gemini, ratelimit, store, teach
 from app.config import settings
 from app.errors import BadRequest, install_handlers
 
@@ -49,6 +49,10 @@ def health() -> dict[str, object]:
     }
 
 
+def _ms(start: float) -> int:
+    return round((time.perf_counter() - start) * 1000)
+
+
 @app.post("/api/detect")
 def detect(
     request: Request,
@@ -73,8 +77,19 @@ def detect(
     }
 
 
-def _ms(start: float) -> int:
-    return round((time.perf_counter() - start) * 1000)
+@app.post("/api/teach")
+def teach_sound(
+    name: str = Form(...),
+    example_1: UploadFile = File(...),
+    example_2: UploadFile = File(...),
+    example_3: UploadFile = File(...),
+    room: UploadFile = File(...),
+    icon: str = Form("generic"),
+) -> dict[str, object]:
+    start = time.perf_counter()
+    examples = [f.file.read() for f in (example_1, example_2, example_3)]
+    result = teach.teach(name, icon, examples, room.file.read())
+    return {**result, "latency_ms": _ms(start)}
 
 
 class SoundPatch(BaseModel):

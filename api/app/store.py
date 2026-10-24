@@ -115,11 +115,16 @@ def _from_blob(blob: bytes) -> np.ndarray:
     return np.frombuffer(blob, dtype=np.float32)
 
 
-def _clean_name(name: str) -> str:
+def clean_name(name: str) -> str:
     cleaned = name.strip()
     if not 1 <= len(cleaned) <= 40:
         raise BadRequest("Name must be 1 to 40 characters.")
     return cleaned
+
+
+def check_icon(icon: str) -> None:
+    if icon not in ICONS:
+        raise BadRequest(f"Unknown icon: {icon}.")
 
 
 def _sound_dict(row: sqlite3.Row) -> dict[str, object]:
@@ -165,9 +170,8 @@ def add_sound(
     db_path: str | None = None,
 ) -> dict[str, object]:
     """Save a taught sound with its prototype vector and room vectors (one per row of `room`)."""
-    name = _clean_name(name)
-    if icon not in ICONS:
-        raise BadRequest(f"Unknown icon: {icon}.")
+    name = clean_name(name)
+    check_icon(icon)
     proto_blob = _to_blob(prototype)
     room_blobs = [_to_blob(row) for row in np.atleast_2d(room)]
     sound_id = new_id("snd")
@@ -220,7 +224,7 @@ def update_sound(
             )
         if name is not None:
             conn.execute(
-                "UPDATE sounds SET name = ? WHERE sound_id = ?", (_clean_name(name), sound_id)
+                "UPDATE sounds SET name = ? WHERE sound_id = ?", (clean_name(name), sound_id)
             )
     return get_sound(sound_id, db_path)
 
