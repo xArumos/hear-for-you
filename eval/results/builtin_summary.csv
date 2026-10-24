@@ -1,0 +1,14 @@
+metric,value
+test_fold,5
+test_clips,52
+chosen_c,0.001
+accuracy_argmax,0.9615384615384616
+accuracy_with_gate,0.8653846153846154
+other_clips_false_alarm_rate,0.0
+min_prob,0.6
+recall_builtin_crying_baby,0.75
+recall_builtin_dog_bark,0.875
+recall_builtin_door_knock,0.75
+recall_builtin_glass_breaking,1.0
+recall_builtin_siren,0.75
+recall_other,1.0

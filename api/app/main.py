@@ -19,6 +19,7 @@ log = logging.getLogger("hearalert.api")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     store.init_db()
+    detectors.load_builtin()
     yield
 
 

@@ -18,6 +18,13 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 
 ## Log
 
+### 2026-10-24 — Built-in classifier (P1)
+
+- **Logistic regression on standardized embeddings, sigmoid-calibrated** (`CalibratedClassifierCV`, each calibrator fit on a held-out training fold). C chosen by leave-one-fold-out on folds 1–4 only; fold 5 is the untouched test set. Fold 5: 0.962 top-class accuracy, 0.865 with the p > 0.6 rule, and no "other" clip fired an alert. The 0.6 rule costs some recall but keeps false alarms down, which matters more for an alert app.
+- **5 built-ins, not 6.** ESC-50 has no smoke alarm, so `builtin_smoke_alarm` stays in the Sounds list but never fires from the classifier until we have recordings.
+- **eval/ runs in api/'s environment** (`uv run --project ../api`), so the saved `.joblib` is always loaded by the scikit-learn version that wrote it. The file records that version and the API warns on a mismatch; it refuses a model trained on a different embedding model or size.
+- **A disabled built-in falls through** to the next step (loud → unknown, else none), the same as a disabled taught sound.
+
 ### 2026-10-24 — Describe unknown sounds with Gemini 3.5 Flash-Lite, not 3.8 Flash (P1)
 
 - **Why:** on the free tier, Gemini 3.8 Flash allows 5 requests a minute and **20 a day**. During testing every call to it timed out (504 `DEADLINE_EXCEEDED`, even a text-only "say hello" with a 30 s timeout). Gemini 3.5 Flash-Lite allows **15 a minute and 500 a day**, accepts audio, and described a test beep in 1.3 s ("This is the sound of a digital watch alarm beeping, likely from a wristwatch."). 3.1 Flash-Lite has the same limits but took 4.7 s and wrote a longer line.
@@ -70,3 +77,4 @@ Add a row for every dependency beyond the fixed stack in `AGENTS.md`.
 | python-multipart | api | FastAPI needs it to read uploaded audio files (`/detect`, `/teach`) | P1 |
 | pytest | api (dev only) | Runs the backend tests required by api/AGENTS.md | P1 |
 | httpx | api (dev only) | FastAPI's test client needs it | P1 |
+| scikit-learn | api, eval | Built-in classifier (fixed stack); pulls in scipy, joblib and threadpoolctl | P1 |
