@@ -94,3 +94,13 @@ def test_detect_gemini_upstream_error(
     res = post_detect(client, make_wav())
     assert res.status_code == 502
     assert_error_shape(res.json(), "upstream_error")
+
+
+def test_detect_over_cap_returns_429(client: TestClient, embed_calls: list[bytes]) -> None:
+    assert post_detect(client, make_wav()).status_code == 200
+    res = post_detect(client, make_wav())
+    assert res.status_code == 429
+    body = res.json()
+    assert_error_shape(body, "rate_limited")
+    assert body["error"]["retry_after_ms"] > 0
+    assert len(embed_calls) == 1

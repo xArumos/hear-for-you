@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, File, Form, Request, Response, UploadFile
 
-from app import audio, gemini
+from app import audio, gemini, ratelimit
 from app.config import settings
 from app.errors import install_handlers
 
@@ -48,6 +48,7 @@ def detect(
     level_db: float = Form(...),
 ) -> dict[str, object]:
     start = time.perf_counter()
+    ratelimit.detect_limiter.check()
     data = clip.file.read()
     audio.validate_clip(data)
     gemini.embed_audio(data)

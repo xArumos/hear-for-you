@@ -5,7 +5,7 @@ import pytest
 import soundfile as sf
 from fastapi.testclient import TestClient
 
-from app import gemini
+from app import gemini, ratelimit
 from app.main import app
 
 
@@ -23,6 +23,12 @@ def make_wav(
     buf = io.BytesIO()
     sf.write(buf, data, rate, format="WAV", subtype=subtype)
     return buf.getvalue()
+
+
+@pytest.fixture(autouse=True)
+def reset_detect_limiter() -> None:
+    """Each test starts with an empty rate-limit window so detect tests don't 429 each other."""
+    ratelimit.detect_limiter.reset()
 
 
 @pytest.fixture
