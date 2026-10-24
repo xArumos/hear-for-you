@@ -23,6 +23,10 @@ import deleteSoundFixture from '../fixtures/delete_sound.json';
 
 const useFixtures = import.meta.env.VITE_USE_FIXTURES === '1';
 
+export class ApiRequestError extends Error {
+  constructor(message: string, public retryAfterMs = 0) { super(message); this.name = 'ApiRequestError'; }
+}
+
 const fixtureMap: Record<string, unknown> = {
   '/health': healthFixture,
   '/sounds': soundsFixture,
@@ -51,9 +55,9 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const errorPayload = (await response.json().catch(() => null)) as { error?: { code: string; message: string } } | null;
+    const errorPayload = (await response.json().catch(() => null)) as { error?: { code: string; message: string; retry_after_ms?: number } } | null;
     const message = errorPayload?.error?.message ?? 'Request failed.';
-    throw new Error(message);
+    throw new ApiRequestError(message, errorPayload?.error?.retry_after_ms ?? 0);
   }
 
   return (await response.json()) as T;
@@ -63,12 +67,13 @@ export async function getHealth(): Promise<HealthResponse> {
   return fetchJson<HealthResponse>('/health');
 }
 
-export async function detectClip(clip: Blob, levelDb: number): Promise<DetectResponse> {
+export async function detectClip(clip: Blob, levelDb: number, signal?: AbortSignal): Promise<DetectResponse> {
   const form = new FormData();
   form.append('clip', clip, 'clip.wav');
   form.append('level_db', String(levelDb));
 
   return fetchJson<DetectResponse>('/detect', {
+    signal,
     method: 'POST',
     body: form,
   });
@@ -96,7 +101,7 @@ export async function updateSound(soundId: string, body: UpdateSoundRequest): Pr
 }
 
 export async function deleteSound(soundId: string): Promise<DeleteSoundResponse> {
-  return fetchJson<DeleteSoundResponse>(`/sounds/${soundId}/delete`, {
+  return fetchJson<DeleteSoundResponse>(`/sounds/${soundId}`, {
     method: 'DELETE',
   });
 }

@@ -3,6 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import { explainMicrophoneError, recordMicrophoneClip } from './audio/recorder'
 import { DEFAULT_BUILTIN_SOUNDS, mergeBuiltinsWithSaved, type GuestSound } from './teach-state'
 
+import { validateWavFile } from './audio/wav'
+import { getSounds, teachSound, updateSound, deleteSound, detectClip, ApiRequestError } from './api/client'
+
+import { startMicrophoneListener } from './audio/listener'
+import type { DetectResponse } from './api/types'
+
 type Screen = 'home' | 'listen' | 'teach' | 'record' | 'history' | 'sounds' | 'account' | 'auth' | 'recognized' | 'unknown' | 'attention'
 type AuthMode = 'signin' | 'create' | 'verify' | 'forgot' | 'reset' | 'expired'
 type IconName = 'door' | 'bell' | 'alarm' | 'baby' | 'dog' | 'kettle' | 'microwave' | 'phone' | 'voice' | 'glass' | 'siren' | 'water' | 'generic'
@@ -69,27 +75,14 @@ function writeStoredValue<T>(key: string, value: T) {
   }
 }
 
-function PlaybackControl({ label, duration, available = true, compact = false }: { label:string; duration:number; available?:boolean; compact?:boolean }) {
-  const [playing, setPlaying] = useState(false)
-  const [progress, setProgress] = useState(0)
+function PlaybackControl({ label, clip }: { label:string; clip:Blob }) {
+  const [url, setUrl] = useState('')
   useEffect(() => {
-    if (!playing) return
-    const timer = window.setInterval(() => setProgress(current => {
-      const next = Math.min(duration, current + .25)
-      if (next >= duration) setPlaying(false)
-      return next
-    }), 250)
-    return () => window.clearInterval(timer)
-  }, [playing, duration])
-  if (!available) return <span className="playback-unavailable">No retained clip</span>
-  const toggle = () => {
-    if (progress >= duration) setProgress(0)
-    setPlaying(!playing)
-  }
-  return <div className={`playback ${compact ? 'compact' : ''}`}>
-    <button className="play-button" onClick={toggle} aria-label={`${playing ? 'Pause' : 'Play'} ${label} demo recording`}>{playing ? 'Ⅱ' : '▶'}</button>
-    <div className="playback-details"><div><span>{playing ? 'Playing demo' : 'Demo preview'}</span><time>{Math.floor(progress / 60)}:{String(Math.floor(progress % 60)).padStart(2,'0')} / 0:{String(duration).padStart(2,'0')}</time></div><div className="playback-track" role="progressbar" aria-label={`${label} playback progress`} aria-valuemin={0} aria-valuemax={duration} aria-valuenow={Math.round(progress)}><span style={{width:`${progress / duration * 100}%`}}/></div></div>
-  </div>
+    const next = URL.createObjectURL(clip)
+    setUrl(next)
+    return () => URL.revokeObjectURL(next)
+  }, [clip])
+  return <div className="playback"><audio controls src={url} aria-label={`Play ${label}`} /></div>
 }
 
 const categories: { name: string; icon: IconName }[] = [
@@ -124,100 +117,103 @@ function Home({ goToTeach, goToListen }: { goToTeach: () => void; goToListen: ()
   return <div className="page home-page"><section className="home-hero"><div><p className="eyebrow">PERSONALIZED SOUND AWARENESS</p><h1>Here when it matters.<br/>Hearing what matters.</h1><h2>Stay connected to the sounds that matter.</h2><p>Hear For You helps you recognize important sounds around you through personalized detection and clear visual alerts — so you can stay aware, informed, and in control.</p><div className="hero-actions"><button className="primary" onClick={goToTeach}>Get Started</button><button className="secondary" onClick={goToListen}>Open Listen</button></div></div><aside className="hero-status card"><div className="hero-mark"><span className="brand-mark"><i/><i/><i/><i/></span></div><p>Here when it matters. Hearing what matters.</p><h2>Clear alerts. Personal sounds. More confidence in your surroundings.</h2><div className="hero-feature"><Icon name="voice"/><span><strong>Stay aware</strong><small>Visual alerts for sounds around you</small></span></div><div className="hero-feature"><Icon name="generic"/><span><strong>Make it personal</strong><small>Teach the sounds that matter to you</small></span></div><div className="hero-feature"><Icon name="warning"/><span><strong>Stay in control</strong><small>Clear labels without unnecessary alarm</small></span></div></aside></section></div>
 }
 
-function Listen({ setScreen, builtins, customSounds }: { setScreen: (s:Screen)=>void; builtins: GuestSound[]; customSounds: GuestSound[] }) {
-  const [status, setStatus] = useState<'active'|'paused'|'reconnecting'|'denied'>('active')
-  const statusText = { active: 'Listening now', paused: 'Listening paused', reconnecting: 'Reconnecting…', denied: 'Microphone access needed' }[status]
-  const visibleSounds = [...builtins.filter((sound) => sound.enabled), ...customSounds.filter((sound) => sound.enabled)]
+function Listen({ setScreen, builtins, customSounds, onDetection }: { setScreen: (s:Screen)=>void; builtins: GuestSound[]; customSounds: GuestSound[]; onDetection:(result:DetectResponse)=>void }) {
+  const [status, setStatus] = useState<'active'|'paused'|'reconnecting'|'denied'>('paused')
+  const [error, setError] = useState<string|null>(null)
+  const controller = useRef<AbortController|null>(null)
+  const detectionRef = useRef(onDetection)
+  detectionRef.current = onDetection
+  const soundsRef = useRef([...builtins, ...customSounds])
+  soundsRef.current = [...builtins, ...customSounds]
+  const stop = () => { controller.current?.abort(); controller.current = null; setStatus('paused') }
+  useEffect(() => () => { controller.current?.abort(); controller.current = null }, [])
+  const start = async () => {
+    if (controller.current) return
+    const current = new AbortController(); controller.current = current
+    setError(null); setStatus('reconnecting')
+    let busy = false, nextRequestAt = 0
+    try {
+      await startMicrophoneListener({ signal: current.signal,
+        onError: error => { if (!current.signal.aborted) { setError(explainMicrophoneError(error)); stop() } },
+        onClip: (clip, levelDb) => {
+          if (current.signal.aborted || busy || Date.now() < nextRequestAt) return
+          busy = true; nextRequestAt = Date.now() + 1000
+          void detectClip(clip, levelDb, current.signal).then(result => {
+            if (current.signal.aborted || result.kind === 'none') return
+            if (result.sound_id && !soundsRef.current.some(sound => sound.sound_id === result.sound_id && sound.enabled)) return
+            detectionRef.current(result)
+          }).catch(error => {
+            if (current.signal.aborted) return
+            if (error instanceof ApiRequestError && error.retryAfterMs) nextRequestAt = Date.now() + error.retryAfterMs
+            setError(error instanceof Error ? error.message : 'Detection failed. Retrying with the next loud sound.')
+          }).finally(() => { busy = false })
+        },
+      })
+      if (!current.signal.aborted) setStatus('active')
+    } catch (error) {
+      if (!current.signal.aborted) { console.error('Listen initialization failed', error); setError(explainMicrophoneError(error)); stop() }
+    }
+  }
+  const statusText = { active: 'Listening now', paused: 'Listening OFF', reconnecting: 'Starting microphone…', denied: 'Microphone access needed' }[status]
+  const visibleSounds = [...builtins, ...customSounds]
 
   return <div className="page listen-page">
     <div className="title-row"><div><p className="eyebrow">LIVE AWARENESS</p><h1>Listen</h1><p>Stay aware of the sounds around you.</p></div><span className={`status-pill ${status}`}><span/>{statusText}</span></div>
+    {error && <section className="permission card" role="alert"><Icon name="warning"/><p>{error}</p></section>}
     {status === 'denied' ? <section className="permission card"><Icon name="warning" size={30}/><div><h2>Allow microphone access</h2><p>Hear For You needs permission to analyze nearby sound on this device. Live microphone audio is not continuously saved.</p></div><button onClick={()=>setStatus('active')} className="primary">Try again</button></section> :
     <section className={`listener card ${status}`}>
       <div className="sound-orbit"><div className="level-ring"/><div className="mic-core"><Icon name="voice" size={52}/></div></div>
-      <h2>{statusText}</h2><p className="room-level"><span className="level-bars"><i/><i/><i/><i/><i/></span>Room level: <strong>{status === 'paused' ? '—' : 'Quiet'}</strong></p>
-      <div className="listener-actions"><button className="primary" onClick={()=>setStatus(status==='paused'?'active':'paused')}><Icon name={status==='paused'?'voice':'pause'}/>{status==='paused'?'Resume listening':'Pause listening'}</button><button className="secondary" onClick={()=>setStatus('reconnecting')}>Reconnect</button></div>
+      <h2>{statusText}</h2><p className="room-level"><span className="level-bars"><i/><i/><i/><i/><i/></span>Room level: <strong>{status === 'active' ? 'Monitoring' : '—'}</strong></p>
+      <div className="listener-actions"><button className="primary" onClick={() => status === 'paused' ? void start() : stop()}><Icon name={status==='paused'?'voice':'pause'}/>{status==='paused'?'Start Listening':'Stop Listening'}</button><button className="secondary" onClick={() => { stop(); void start() }}>Reconnect</button></div>
     </section>}
     <div className="dashboard-grid">
       <section className="card sounds-card"><div className="section-head"><div><h2>Your sounds</h2><p>Enabled sound categories and saved sounds appear here.</p></div></div>
-        {visibleSounds.length === 0 ? <div className="sounds-empty"><span className="empty-plus">+</span><h2>No active sounds yet</h2><p>Turn on a built-in sound or save a custom one to start listening.</p><button className="primary" onClick={()=>setScreen('teach')}><span aria-hidden="true">+</span> Teach a sound</button></div> : <div className="sound-list">{visibleSounds.slice(0, 6).map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon as IconName}/></span><span><strong>{sound.name}</strong><small>{sound.kind === 'builtin' ? 'Built-in category' : 'Saved sound'}</small></span><button className="text-button" onClick={()=>setScreen('sounds')}>View</button></div>)}</div>}
+        {visibleSounds.length === 0 ? <div className="sounds-empty"><span className="empty-plus">+</span><h2>No active sounds yet</h2><p>Turn on a built-in sound or save a custom one to start listening.</p><button className="primary" onClick={()=>setScreen('teach')}><span aria-hidden="true">+</span> Teach a sound</button></div> : <div className="sound-list">{visibleSounds.slice(0, 6).map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon as IconName}/></span><span><strong>{sound.name}</strong><small>{!sound.enabled ? 'Disabled' : sound.kind === 'builtin' ? 'Built-in category' : 'Saved sound'}</small></span><button className="text-button" onClick={()=>setScreen('sounds')}>View</button></div>)}</div>}
       </section>
       <aside className="info-card card"><span className="info-icon">i</span><h2>Private by design</h2><p>Only loud sounds are analyzed. Audio is never stored permanently in your browser session.</p><hr/><p><strong>Keep this tab visible.</strong><br/>Browsers may limit microphone access when your screen is locked or the tab is hidden.</p></aside>
     </div>
   </div>
 }
 
-function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecording }: { setScreen:(s:Screen)=>void; done:boolean[]; saved:boolean; startRecording:(index:number)=>void; saveSound:(payload:{name:string; icon:IconName})=>void; deleteRecording:(index:number)=>void }) {
-  const [selected, setSelected] = useState<IconName>('door')
-  const [name, setName] = useState('Door knock')
+function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecording, clips, message, saving, name, setName, selected, setSelected }: { setScreen:(s:Screen)=>void; done:boolean[]; clips:(Blob|null)[]; message:string|null; saving:boolean; name:string; setName:(name:string)=>void; selected:IconName; setSelected:(icon:IconName)=>void; saved:boolean; startRecording:(index:number)=>void; saveSound:(payload:{name:string; icon:IconName})=>void; deleteRecording:(index:number)=>void }) {
   const handleSave = () => saveSound({ name, icon: selected })
 
   return <div className="page"><div className="title-row"><div><p className="eyebrow">PERSONAL SOUND LIBRARY</p><h1>Teach a sound</h1><p>Teach Hear For You the sounds that matter to you.</p></div><span className="step-label">{done.filter(Boolean).length} of 4 recordings</span></div>
     <div className="teach-grid"><div className="teach-left">
       <section className="card form-section"><span className="step">1</span><div className="step-content"><h2>Sound name</h2><label htmlFor="soundName">Use a clear, descriptive name</label><input id="soundName" value={name} onChange={e=>setName(e.target.value)} /></div></section>
       <section className="card form-section"><span className="step">2</span><div className="step-content"><h2>Choose an icon</h2><div className="icon-grid">{categories.map(c=><button key={c.icon} className={selected===c.icon?'selected':''} onClick={()=>setSelected(c.icon)}><Icon name={c.icon}/><small>{c.name}</small></button>)}</div></div></section>
-      <section className="card form-section"><span className="step">3</span><div className="step-content"><h2>Record examples</h2><p>Start with Example 1. We’ll guide you through every recording automatically. Completed clips remain in memory until this session ends.</p><div className="record-list">{['Example 1','Example 2','Example 3','Room noise'].map((x,i)=><div className={`record-item ${done[i]?'complete':''}`} key={x}><div className="record-summary"><span className={`record-state ${done[i]?'done':''}`}>{done[i]?<Icon name="check" size={16}/>:i+1}</span><span><strong>{x}</strong><small>{i === 3 ? '10 seconds' : '3 seconds'} · {done[i] ? 'Completed' : i===0 ? 'Ready' : 'Upcoming'}</small></span></div>{done[i]?<><PlaybackControl label={x.toLowerCase()} duration={i===3?10:3}/><div className="record-actions"><button onClick={()=>startRecording(i)}>Re-record</button><button onClick={()=>deleteRecording(i)}>Delete audio</button></div></>:<button className="record-next" onClick={()=>startRecording(i)}>Record <span>›</span></button>}</div>)}</div>{!done.some(Boolean)&&<button className="primary begin-recording" onClick={()=>startRecording(0)}><Icon name="voice"/>Begin recording</button>}</div></section>
-    </div><aside className="teach-side card"><div className="preview-icon"><Icon name={selected} size={48}/></div><p>Sound preview</p><h2>{name || 'Untitled sound'}</h2><div className="progress-wrap"><div><span>Recording progress</span><strong>{done.filter(Boolean).length}/4</strong></div><div className="progress"><span style={{width:`${done.filter(Boolean).length*25}%`}}/></div></div><button className="primary" disabled={!done.every(Boolean) || !name.trim() || saved} onClick={handleSave}>{saved?<><Icon name="check"/>Sound saved</>:'Save and check sound'}</button><p className="side-help">{saved?'Your sound is saved and ready to use.':'Complete the guided recording to continue.'}</p></aside></div>
+      <section className="card form-section"><span className="step">3</span><div className="step-content"><h2>Record examples</h2><p>Start with Example 1. We’ll guide you through every recording after you accept each clip. Completed clips remain in memory until this session ends.</p><div className="record-list">{['Example 1','Example 2','Example 3','Room noise'].map((x,i)=><div className={`record-item ${done[i]?'complete':''}`} key={x}><div className="record-summary"><span className={`record-state ${done[i]?'done':''}`}>{done[i]?<Icon name="check" size={16}/>:i+1}</span><span><strong>{x}</strong><small>{i === 3 ? '10 seconds' : '3 seconds'} · {done[i] ? 'Completed' : i===0 ? 'Ready' : 'Upcoming'}</small></span></div>{done[i]?<><PlaybackControl label={x.toLowerCase()} clip={clips[i]!}/><div className="record-actions"><button onClick={()=>startRecording(i)}>Re-record</button><button onClick={()=>deleteRecording(i)}>Delete audio</button></div></>:<button className="record-next" onClick={()=>startRecording(i)}>Record <span>›</span></button>}</div>)}</div>{!done.some(Boolean)&&<button className="primary begin-recording" onClick={()=>startRecording(0)}><Icon name="voice"/>Begin recording</button>}</div></section>
+    </div><aside className="teach-side card"><div className="preview-icon"><Icon name={selected} size={48}/></div><p>Sound preview</p><h2>{name || 'Untitled sound'}</h2><div className="progress-wrap"><div><span>Recording progress</span><strong>{done.filter(Boolean).length}/4</strong></div><div className="progress"><span style={{width:`${done.filter(Boolean).length*25}%`}}/></div></div><button className="primary" disabled={!done.every(Boolean) || !name.trim() || name.trim().length > 40 || saved || saving} onClick={handleSave}>{saved?<><Icon name="check"/>Sound saved</>:'Save and check sound'}</button><p className="side-help">{message ?? (saving ? 'Saving and checking…' : saved ? 'Your sound is saved and ready to use.' : 'Complete the guided recording to continue.')}</p></aside></div>
   </div>
 }
 
-function Recording({ setScreen, index, saveRecording }: { setScreen:(s:Screen)=>void; index:number; saveRecording:()=>void }) {
+function Recording({ setScreen, index, saveRecording }: { setScreen:(s:Screen)=>void; index:number; saveRecording:(clip:Blob)=>void }) {
   const duration = index === 3 ? 10 : 3
   const [time, setTime] = useState(duration)
   const [recording, setRecording] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-
-  useEffect(() => {
-    if (!recording) return
-
-    const timer = window.setInterval(() => {
-      setTime((current) => {
-        if (current <= 1) {
-          window.clearInterval(timer)
-          return 0
-        }
-        return current - 1
-      })
-    }, 1000)
-
-    return () => window.clearInterval(timer)
-  }, [recording])
-
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort()
-    }
-  }, [])
-
+  const [clip, setClip] = useState<Blob|null>(null)
+  const [error, setError] = useState<string|null>(null)
+  const abortRef = useRef<AbortController|null>(null)
+  useEffect(() => () => { abortRef.current?.abort() }, [])
   const handleRecording = async () => {
-    if (recording) {
-      abortRef.current?.abort()
-      setRecording(false)
-      setTime(duration)
-      return
-    }
-
-    setError(null)
-    setRecording(true)
-    setTime(duration)
-
+    if (abortRef.current) { abortRef.current.abort(); return }
     const controller = new AbortController()
     abortRef.current = controller
-
+    setError(null); setClip(null); setRecording(true); setTime(duration)
     try {
-      await recordMicrophoneClip(duration * 1000, { signal: controller.signal })
-      setRecording(false)
-      setTime(duration)
-      saveRecording()
-    } catch (caughtError) {
-      setRecording(false)
-      setTime(duration)
-      setError(explainMicrophoneError(caughtError))
+      const result = await recordMicrophoneClip(duration * 1000, {
+        signal: controller.signal, allowSilence: index === 3,
+        onProgress: fraction => setTime(Math.max(0, duration - Math.floor(fraction * duration))),
+      })
+      if (!controller.signal.aborted) setClip(result)
+    } catch (error) {
+      if (!controller.signal.aborted) { console.error('Audio recording failed', error); setError(explainMicrophoneError(error)) }
+    } finally {
+      if (abortRef.current === controller) { abortRef.current = null; setRecording(false) }
     }
   }
-
   const elapsed = duration - time
-  return <div className="page recording-page"><button className="back" onClick={()=>setScreen('teach')}>← Back to sound</button><p className="eyebrow">{index === 3 ? 'ROOM NOISE' : `EXAMPLE ${index + 1}`} OF 4</p><h1>{index === 3 ? 'Record room noise' : 'Record an example'}</h1><p>{index === 3 ? 'Final step: capture the normal background sound in this room.' : 'Make your sound during the 3-second recording. The next step will open automatically.'}</p>{error && <section className="card permission"><Icon name="warning" size={30}/><div><h2>Microphone unavailable</h2><p>{error}</p></div><button className="primary" onClick={() => setError(null)}>Try again</button></section>} {!error && <section className={`record-panel card ${recording?'is-recording':''}`}><div className="record-orbit"><div className="mic-core"><Icon name="voice" size={58}/></div></div><h2>{recording ? (time ? `0:${String(elapsed).padStart(2,'0')} / 0:${String(duration).padStart(2,'0')}` : 'Recording complete') : 'Ready when you are'}</h2><div className="wave" aria-label="Recording level">{[16,30,44,60,72,52,64,38,55,66,42,30,20].map((h,i)=><i key={i} style={{height:`${h}px`}}/>)}</div>{recording&&time===0?<><button className="primary" onClick={saveRecording}><Icon name="check"/>{index === 3 ? 'Finish and save sound' : 'Use and continue'}</button><button className="secondary" onClick={()=>{setTime(duration);setRecording(false)}}>Re-record</button></>:<button className="primary record-button" onClick={handleRecording}>{recording?'■ Stop recording':<><Icon name="voice"/>Start recording</>}</button>}</section>}</div>
+  return <div className="page recording-page"><button className="back" onClick={()=>setScreen('teach')}>← Back to sound</button><p className="eyebrow">{index === 3 ? 'ROOM NOISE' : `EXAMPLE ${index + 1}`} OF 4</p><h1>{index === 3 ? 'Record room noise' : 'Record an example'}</h1><p>{index === 3 ? 'Final step: capture the normal background sound in this room.' : 'Make your sound during the 3-second recording. Review and accept this clip before continuing.'}</p>{error && <section className="card permission"><Icon name="warning" size={30}/><div><h2>Microphone unavailable</h2><p>{error}</p></div><button className="primary" onClick={() => setError(null)}>Try again</button></section>} {!error && <section className={`record-panel card ${recording?'is-recording':''}`}><div className="record-orbit"><div className="mic-core"><Icon name="voice" size={58}/></div></div><h2>{recording ? (time ? `0:${String(elapsed).padStart(2,'0')} / 0:${String(duration).padStart(2,'0')}` : 'Recording complete') : clip ? 'Recording complete' : 'Ready when you are'}</h2><div className="wave" aria-label="Recording level">{[16,30,44,60,72,52,64,38,55,66,42,30,20].map((h,i)=><i key={i} style={{height:`${h}px`}}/>)}</div>{clip&&!recording?<><PlaybackControl label="recording" clip={clip}/><button className="primary" onClick={() => clip && saveRecording(clip)}><Icon name="check"/>{index === 3 ? 'Use and return to review' : 'Use and Continue'}</button><button className="secondary" onClick={() => { setClip(null); void handleRecording() }}>Re-record</button></>:<button className="primary record-button" onClick={handleRecording}>{recording?'■ Stop recording':<><Icon name="voice"/>Start recording</>}</button>}</section>}</div>
 }
 
 function AuthScreen() {
@@ -259,42 +255,66 @@ function History({ events }: { events: GuestHistoryEvent[] }) {
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
+  const [detection, setDetection] = useState<DetectResponse|null>(null)
   const [dark, setDark] = useState(false)
-  const [recordings, setRecordings] = useState([false, false, false, false])
+  const [clips, setClips] = useState<(Blob|null)[]>([null, null, null, null])
+  const recordings = clips.map(Boolean)
+  const [name, setName] = useState('Door knock')
+  const [selected, setSelected] = useState<IconName>('door')
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState<string|null>(null)
+  const backendIds = useRef(new Set<string>())
+  const saveLock = useRef(false)
   const [recordingIndex, setRecordingIndex] = useState(0)
   const [soundSaved, setSoundSaved] = useState(false)
   const [builtinSounds, setBuiltinSounds] = useState<GuestSound[]>(() => mergeBuiltinsWithSaved(readStoredValue<GuestSound[]>(STORAGE_KEYS.builtins, DEFAULT_BUILTIN_SOUNDS)))
-  const [customSounds, setCustomSounds] = useState<GuestSound[]>(() => readStoredValue<GuestSound[]>(STORAGE_KEYS.custom, []))
+  const [customSounds, setCustomSounds] = useState<GuestSound[]>(() => readStoredValue<GuestSound[]>(STORAGE_KEYS.custom, []).map(sound => ({ ...sound, enabled: false })))
   const [history, setHistory] = useState<GuestHistoryEvent[]>(() => readStoredValue<GuestHistoryEvent[]>(STORAGE_KEYS.history, []))
 
   useEffect(() => { writeStoredValue(STORAGE_KEYS.builtins, builtinSounds) }, [builtinSounds])
   useEffect(() => { writeStoredValue(STORAGE_KEYS.custom, customSounds) }, [customSounds])
   useEffect(() => { writeStoredValue(STORAGE_KEYS.history, history) }, [history])
 
-  const saveCustomSound = ({ name, icon }: { name: string; icon: IconName }) => {
-    const trimmed = name.trim()
-    if (!trimmed) return
+  useEffect(() => {
+    let cancelled = false
+    void getSounds().then(response => {
+      if (cancelled) return
+      backendIds.current = new Set(response.sounds.map(sound => sound.sound_id))
+      setBuiltinSounds(current => mergeBuiltinsWithSaved(response.sounds.filter(sound => sound.kind === 'builtin').map(sound => ({ ...sound, enabled: current.find(item => item.sound_id === sound.sound_id)?.enabled ?? sound.enabled }))))
+      setCustomSounds(current => [...response.sounds.filter(sound => sound.kind === 'taught'), ...current.filter(sound => !backendIds.current.has(sound.sound_id)).map(sound => ({ ...sound, enabled: false }))])
+    }).catch(() => { if (!cancelled) setCustomSounds(current => current.map(sound => ({ ...sound, enabled: false }))) })
+    return () => { cancelled = true }
+  }, [])
 
-    const nextSound: GuestSound = {
-      sound_id: `snd_${Date.now()}`,
-      name: trimmed,
-      icon,
-      kind: 'taught',
-      enabled: true,
-    }
-
-    setCustomSounds((current) => [nextSound, ...current])
-    setSoundSaved(true)
-    setScreen('sounds')
+  const saveCustomSound = async ({ name, icon }: { name: string; icon: IconName }) => {
+    if (saveLock.current || !name.trim() || name.trim().length > 40 || clips.some(clip => !clip)) return
+    saveLock.current = true; setSaving(true); setMessage(null)
+    try {
+      for (let i = 0; i < 4; i++) if (!await validateWavFile(clips[i]!, i === 3 ? 160000 : 48000)) throw new Error('Please re-record the invalid clip.')
+      const form = new FormData()
+      form.append('name', name.trim()); form.append('icon', icon)
+      clips.forEach((clip, i) => form.append(i === 3 ? 'room' : `example_${i + 1}`, clip!, `recording-${i}.wav`))
+      const result = await teachSound(form)
+      backendIds.current.add(result.sound_id)
+      setCustomSounds(current => [{ sound_id: result.sound_id, name: result.name, icon: result.icon, kind: 'taught', enabled: result.self_check.passed }, ...current.filter(sound => sound.sound_id !== result.sound_id)])
+      if (!result.self_check.passed) {
+        await updateSound(result.sound_id, { enabled: false })
+        setMessage('Self-check did not pass. Re-record the examples and try again. The backend saved this sound disabled.')
+        return
+      }
+      setSoundSaved(true); setMessage('Sound saved; self-check passed.')
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Saving failed. Your recordings are still available.') }
+    finally { saveLock.current = false; setSaving(false) }
   }
 
   const startRecording = (index: number) => {
+    setSoundSaved(false)
     setRecordingIndex(index)
     setScreen('record')
   }
 
-  const saveRecording = () => {
-    setRecordings((current) => current.map((saved, index) => index === recordingIndex ? true : saved))
+  const saveRecording = (clip: Blob) => {
+    setClips(current => current.map((saved, index) => index === recordingIndex ? clip : saved))
     if (recordingIndex < 3) {
       setRecordingIndex(recordingIndex + 1)
     } else {
@@ -304,14 +324,18 @@ export default function App() {
   }
 
   const toggleBuiltin = (soundId: string) => {
-    setBuiltinSounds((current) => current.map((sound) => sound.sound_id === soundId ? { ...sound, enabled: !sound.enabled } : sound))
+    const sound = builtinSounds.find(item => item.sound_id === soundId)
+    if (!sound) return
+    void updateSound(soundId, { enabled: !sound.enabled }).then(result => setBuiltinSounds(current => current.map(item => item.sound_id === soundId ? result : item))).catch(error => window.alert(error instanceof Error ? error.message : 'Could not update sound.'))
   }
 
   const deleteCustom = (soundId: string) => {
-    setCustomSounds((current) => current.filter((sound) => sound.sound_id !== soundId))
+    if (!backendIds.current.has(soundId)) { setCustomSounds(current => current.filter(sound => sound.sound_id !== soundId)); return }
+    void deleteSound(soundId).then(() => setCustomSounds(current => current.filter(sound => sound.sound_id !== soundId))).catch(error => window.alert(error instanceof Error ? error.message : 'Could not delete sound.'))
   }
 
   const navigate = (next: Screen) => {
+    setDetection(null)
     setScreen(next)
   }
 
@@ -319,5 +343,8 @@ export default function App() {
     return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}><AuthScreen /></Shell></div>
   }
 
-  return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}>{screen === 'home' ? <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} /> : screen === 'listen' ? <Listen setScreen={setScreen} builtins={builtinSounds} customSounds={customSounds} /> : screen === 'teach' ? <Teach setScreen={setScreen} done={recordings} saved={soundSaved} startRecording={startRecording} saveSound={saveCustomSound} deleteRecording={(index) => { setRecordings((current) => current.map((value, currentIndex) => currentIndex === index ? false : value)); setSoundSaved(false) }} /> : screen === 'record' ? <Recording key={recordingIndex} setScreen={setScreen} index={recordingIndex} saveRecording={saveRecording} /> : screen === 'sounds' ? <MySounds builtinSounds={builtinSounds} customSounds={customSounds} toggleBuiltin={toggleBuiltin} deleteCustom={deleteCustom} saveCustom={() => setScreen('teach')} /> : screen === 'history' ? <History events={history} /> : <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} />}</Shell></div>
+  return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}>{detection && screen === 'listen' && <section className={`alert-screen ${detection.kind === 'unknown' ? 'unknown' : 'recognized'}`} role="alert"><Icon name={detection.kind === 'unknown' ? 'warning' : 'bell'} size={64}/><h1 style={{fontSize:48}}>{detection.label ?? 'What was that?'}</h1><p>{detection.description ?? (detection.confidence !== null ? `${Math.round(detection.confidence * 100)}% confidence` : 'A loud sound was detected.')}</p><button className="primary" style={{minHeight:64}} onClick={() => setDetection(null)}>Dismiss</button></section>}{screen === 'home' ? <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} /> : screen === 'listen' ? <Listen setScreen={setScreen} builtins={builtinSounds} customSounds={customSounds} onDetection={result => {
+      setDetection(result)
+      setHistory(current => [{ ...result, at: new Date().toISOString() }, ...current.filter(event => event.event_id !== result.event_id)])
+    }} /> : screen === 'teach' ? <Teach setScreen={setScreen} done={recordings} clips={clips} message={message} saving={saving} name={name} setName={setName} selected={selected} setSelected={setSelected} saved={soundSaved} startRecording={startRecording} saveSound={saveCustomSound} deleteRecording={(index) => { setClips((current) => current.map((value, currentIndex) => currentIndex === index ? null : value)); setSoundSaved(false) }} /> : screen === 'record' ? <Recording key={recordingIndex} setScreen={setScreen} index={recordingIndex} saveRecording={saveRecording} /> : screen === 'sounds' ? <MySounds builtinSounds={builtinSounds} customSounds={customSounds} toggleBuiltin={toggleBuiltin} deleteCustom={deleteCustom} saveCustom={() => setScreen('teach')} /> : screen === 'history' ? <History events={history} /> : <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} />}</Shell></div>
 }
