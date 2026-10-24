@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, Form, Query, Request, Response, UploadFile
 from pydantic import BaseModel
 
-from app import audio, detectors, ratelimit, store, teach
+from app import audio, detectors, store, teach
 from app.config import settings
 from app.errors import BadRequest, install_handlers
 
@@ -61,10 +61,9 @@ def detect(
     level_db: float = Form(...),
 ) -> dict[str, object]:
     start = time.perf_counter()
-    ratelimit.detect_limiter.check()
     data = clip.file.read()
-    audio.validate_clip(data)
-    event = detectors.detect(data, level_db)
+    samples = audio.validate_clip(data)
+    event = detectors.detect(data, samples, level_db)
     request.state.kind = event["kind"]
     event.pop("at", None)
     return {**event, "latency_ms": _ms(start)}
