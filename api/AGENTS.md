@@ -14,6 +14,7 @@ api/
     detectors.py     # built-in classifier, personal prototypes, unknown logic
     smoke_alarm.py   # rule-based T3 smoke-alarm detector (no embedding)
     teach.py         # /teach: embeddings, prototype, self-check
+    metrics.py       # serves metrics.json for GET /api/metrics
     store.py         # SQLite: sounds, prototypes (as BLOB), history
     ratelimit.py     # MAX_DETECT_PER_SEC cap for /detect
     errors.py        # contract error shape + exception handlers

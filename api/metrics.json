@@ -1,0 +1,15 @@
+{
+  "builtin_accuracy": {
+    "zero_shot": null,
+    "trained": 0.865,
+    "test_fold": 5
+  },
+  "taught_miss_rate": null,
+  "false_alarms_per_hour": null,
+  "latency_ms_median": null,
+  "gemini_calls_per_hour": {
+    "gate_off": null,
+    "gate_on": null
+  },
+  "updated_at": "2026-10-24T21:18:08Z"
+}
