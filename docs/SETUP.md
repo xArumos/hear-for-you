@@ -33,11 +33,14 @@ cd hearalert
 ```
 GEMINI_API_KEY=your-key-here
 EMBED_MODEL=gemini-embedding-2
-DESCRIBE_MODEL=gemini-3.8-flash
+DESCRIBE_MODEL=gemini-3.5-flash-lite
 EMBED_DIM=768
 MAX_DETECT_PER_SEC=1
+MAX_DESCRIBE_PER_SEC=0.1
 DB_PATH=./hearalert.db
 ```
+
+If your `api/.env` still says `DESCRIBE_MODEL=gemini-3.8-flash`, change it to `gemini-3.5-flash-lite` (or delete the line to use the default). The file overrides the code's default.
 
 ## 4. Run the backend
 

@@ -18,7 +18,7 @@ About 430 million people worldwide have disabling hearing loss. Phone sound-reco
 2. Each loud moment becomes a 3-second clip, sent to our API.
 3. [Gemini Embedding 2](https://ai.google.dev/gemini-api/docs/embeddings) (GA April 2026) turns the clip into a vector in the same space as text.
 4. Our detectors match it against built-in sounds and the sounds you taught.
-5. A match triggers a full-screen alert. A loud sound with no match goes to Gemini 3.8 Flash (GA September 2026) for a one-line description.
+5. A match triggers a full-screen alert. A loud sound with no match goes to Gemini 3.5 Flash-Lite for a one-line description.
 
 Evaluation numbers are on the in-app **Model Card** page and in [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md).
 
@@ -52,7 +52,7 @@ We'd love help. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) and issues label
 
 - Code: [MIT](LICENSE).
 - Built-in sound training data: [ESC-50](https://github.com/karolpiczak/ESC-50) by Karol J. Piczak, licensed **CC BY-NC**. Clips are not redistributed in this repo; run `data/` scripts to download them.
-- Models: Gemini Embedding 2 and Gemini 3.8 Flash via the Gemini API.
+- Models: Gemini Embedding 2 and Gemini 3.5 Flash-Lite via the Gemini API.
 
 ## Team
 

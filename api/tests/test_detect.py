@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from app import detectors, gemini, store
+from app import detectors, gemini, ratelimit, store
 from app.detectors import TaughtScore
 from tests.conftest import make_wav
 from tests.test_routes import post_detect
@@ -103,3 +103,16 @@ def test_quiet_unmatched_is_none(client: TestClient, monkeypatch: pytest.MonkeyP
 )
 def test_taught_confidence(score: float, expected: float) -> None:
     assert detectors.taught_confidence(TaughtScore(score, 0.0, 0.6)) == pytest.approx(expected)
+
+
+def test_describe_cap_skips_gemini(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    embed_as(monkeypatch, basis((9, 1.0)))
+    described: list[bytes] = []
+    monkeypatch.setattr(gemini, "describe_audio", lambda wav: described.append(wav) or "A dog barking.")
+    first = post_detect(client, make_wav(), level_db="-6").json()
+    ratelimit.detect_limiter.reset()
+    second = post_detect(client, make_wav(), level_db="-6").json()
+    assert first["description"] == "A dog barking."
+    assert second["kind"] == "unknown" and second["description"] is None
+    assert len(described) == 1
+    assert len(store.list_events()) == 2

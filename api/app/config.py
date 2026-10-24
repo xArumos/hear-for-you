@@ -27,6 +27,7 @@ class Settings:
     describe_model: str
     embed_dim: int
     max_detect_per_sec: float
+    max_describe_per_sec: float
     db_path: str
 
 
@@ -35,9 +36,10 @@ def load_settings(path: Path = ENV_PATH) -> Settings:
     return Settings(
         gemini_api_key=env.get("GEMINI_API_KEY", ""),
         embed_model=env.get("EMBED_MODEL", "gemini-embedding-2"),
-        describe_model=env.get("DESCRIBE_MODEL", "gemini-3.8-flash"),
+        describe_model=env.get("DESCRIBE_MODEL", "gemini-3.5-flash-lite"),
         embed_dim=int(env.get("EMBED_DIM", "768")),
         max_detect_per_sec=float(env.get("MAX_DETECT_PER_SEC", "1")),
+        max_describe_per_sec=float(env.get("MAX_DESCRIBE_PER_SEC", "0.1")),
         db_path=env.get("DB_PATH", "./hearalert.db"),
     )
 

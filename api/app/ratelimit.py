@@ -1,4 +1,4 @@
-"""Server-side request cap for /api/detect, protecting the Gemini free-tier quota."""
+"""Server-side caps for /api/detect and for describe calls, protecting the Gemini free-tier quota."""
 
 import math
 import threading
@@ -18,19 +18,29 @@ class RateLimiter:
         self._lock = threading.Lock()
         self._last: float | None = None
 
-    def check(self) -> None:
-        """Record this call, or raise RateLimited if it comes too soon after the last allowed one."""
+    def _wait_ms(self) -> int:
+        """Record this call and return 0, or return the ms until the next one is allowed."""
         if self.min_interval <= 0:
-            return
+            return 0
         with self._lock:
             now = self._clock()
             if self._last is not None:
                 elapsed = now - self._last
                 if elapsed < self.min_interval:
                     # round() first so float noise (200.0000001 ms) doesn't ceil up a whole ms.
-                    retry_after_ms = math.ceil(round((self.min_interval - elapsed) * 1000, 3))
-                    raise RateLimited("Too many detect requests.", retry_after_ms=retry_after_ms)
+                    return math.ceil(round((self.min_interval - elapsed) * 1000, 3))
             self._last = now
+            return 0
+
+    def check(self) -> None:
+        """Record this call, or raise RateLimited if it comes too soon after the last allowed one."""
+        retry_after_ms = self._wait_ms()
+        if retry_after_ms:
+            raise RateLimited("Too many detect requests.", retry_after_ms=retry_after_ms)
+
+    def allow(self) -> bool:
+        """Record this call and return True, or return False if it comes too soon. Never raises."""
+        return self._wait_ms() == 0
 
     def reset(self) -> None:
         with self._lock:
@@ -38,3 +48,4 @@ class RateLimiter:
 
 
 detect_limiter = RateLimiter(settings.max_detect_per_sec)
+describe_limiter = RateLimiter(settings.max_describe_per_sec)

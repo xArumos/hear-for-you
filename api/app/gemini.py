@@ -101,7 +101,7 @@ def _shorten(text: str) -> str:
 
 
 def describe_audio(wav: bytes) -> str | None:
-    """One plain sentence about an unknown sound from gemini-3.8-flash, or None if the call fails."""
+    """One plain sentence about an unknown sound from the describe model, or None if the call fails."""
     try:
         client = _get_client()
 

@@ -9,6 +9,7 @@ import pytest
 from google.genai import errors, types
 
 from app import gemini
+from app.config import settings
 from app.errors import RateLimited, UpstreamError
 
 
@@ -114,7 +115,7 @@ def test_describe_sends_prompt_and_audio(monkeypatch: pytest.MonkeyPatch) -> Non
     models = install_fake(monkeypatch, [lambda: text_response(" A dog barking outside.\n")])
     assert gemini.describe_audio(b"wav") == "A dog barking outside."
     call = models.calls[0]
-    assert call["model"] == "gemini-3.8-flash"
+    assert call["model"] == settings.describe_model
     prompt, part = call["contents"]  # type: ignore[misc]
     assert prompt == gemini.DESCRIBE_PROMPT
     assert part.inline_data.mime_type == "audio/wav" and part.inline_data.data == b"wav"
