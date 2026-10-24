@@ -12,7 +12,7 @@ export function resampleToSampleRate(samples: Float32Array, inputSampleRate: num
   const output = new Float32Array(outputLength);
 
   for (let index = 0; index < outputLength; index += 1) {
-    const originalPosition = (index / ratio);
+    const originalPosition = index / ratio;
     const leftIndex = Math.floor(originalPosition);
     const rightIndex = Math.min(leftIndex + 1, samples.length - 1);
     const fraction = originalPosition - leftIndex;
@@ -22,6 +22,62 @@ export function resampleToSampleRate(samples: Float32Array, inputSampleRate: num
   }
 
   return output;
+}
+
+export async function validateWavFile(blob: Blob, expectedSampleCount?: number): Promise<boolean> {
+  if (!blob || blob.size < 44) {
+    return false;
+  }
+
+  const buffer = await blob.arrayBuffer();
+  if (buffer.byteLength < 44) {
+    return false;
+  }
+
+  const view = new DataView(buffer);
+
+  const readString = (offset: number, length: number) => {
+    let value = '';
+    for (let index = 0; index < length; index += 1) {
+      value += String.fromCharCode(view.getUint8(offset + index));
+    }
+    return value;
+  };
+
+  if (readString(0, 4) !== 'RIFF' || readString(8, 4) !== 'WAVE' || readString(12, 4) !== 'fmt ' || readString(36, 4) !== 'data') {
+    return false;
+  }
+
+  const audioFormat = view.getUint16(20, true);
+  const channels = view.getUint16(22, true);
+  const sampleRate = view.getUint32(24, true);
+  const byteRate = view.getUint32(28, true);
+  const blockAlign = view.getUint16(32, true);
+  const bitsPerSample = view.getUint16(34, true);
+  const dataLength = view.getUint32(40, true);
+
+  if (audioFormat !== 1 || channels !== 1 || sampleRate !== 16000 || bitsPerSample !== 16) {
+    return false;
+  }
+
+  if (byteRate !== sampleRate * blockAlign || blockAlign !== 2) {
+    return false;
+  }
+
+  const sampleCount = dataLength / 2;
+  if (!Number.isInteger(sampleCount) || sampleCount <= 0) {
+    return false;
+  }
+
+  if (buffer.byteLength !== 44 + dataLength) {
+    return false;
+  }
+
+  if (expectedSampleCount !== undefined && sampleCount !== expectedSampleCount) {
+    return false;
+  }
+
+  return true;
 }
 
 export function encodeWav(samples: Float32Array, sampleRate = 16000): Blob {
