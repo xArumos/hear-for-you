@@ -26,12 +26,12 @@ This is a 48-hour hackathon project (Gator Hack V, Oct 23–25 2026). Prefer sim
 | `eval/` | P1 | Evaluation scripts and notebooks, Model Card numbers |
 | `web/` | P2 (frontend) | React app: Teach, Listen, Alert, History, Model Card page |
 | `data/` | P3 (data and integration) | Download scripts, embeddings, manifests (no raw audio in git) |
-| `docs/` | Everyone (P4 keeps it organized) | Setup, decisions, model card, demo script |
-| Root `.md` files | Everyone, via PR reviewed by P4 | Shared rules and contracts |
+| `docs/` | Everyone (P4 leads the demo script) | Setup, decisions, model card, demo script |
+| Root `.md` files | Everyone, via PR approved by P1, P2 or P3 (not the author) | Shared rules and contracts |
 
 Rules:
 - Only edit code inside the folder your human owns. If another code folder needs a change, write it up as a GitHub issue or a note in your PR description. Do not make the edit.
-- `docs/` is shared: when your change makes a doc out of date, update it in the same PR (a dependency or decision in `DECISIONS.md`, a step in `SETUP.md`, a number in `MODEL_CARD.md`). Add or fix only what your change affects; don't rewrite other people's sections or reorganize a doc. That stays with P4.
+- `docs/` is shared: when your change makes a doc out of date, update it in the same PR (a dependency or decision in `DECISIONS.md`, a step in `SETUP.md`, a number in `MODEL_CARD.md`). Add or fix only what your change affects; don't rewrite other people's sections or reorganize a doc without asking the team.
 - Never change `CONTRACT.md` on your own. Propose the change in the PR description; P1 and P2 must both agree.
 - If you need a shape the contract does not have, stop and ask your human.
 
@@ -75,7 +75,11 @@ Contrast at least 4.5:1, tap targets at least 48 px, respects `prefers-reduced-m
 ## 9. Git workflow
 
 - Branch per person: `p1/<feature>`, `p2/<feature>`, `p3/<feature>`, `p4/<feature>`.
-- Never push to `main` directly. Open a PR; P4 merges.
+- Never push to `main` directly. Open a PR, then merge it yourself with **Create a merge commit** (not squash) once it is ready:
+  - `api/` or `eval/`: `uv run pytest` passes.
+  - `web/`: `npm run build` passes.
+  - Root `.md` files (including `CONTRACT.md`): approved by one of P1, P2 or P3 who is not the author. `CONTRACT.md` still needs both P1 and P2.
+  - Touches a folder you don't own: approved by that folder's owner.
 - Commit messages: `area: what changed`, for example `api: add /teach endpoint`, `web: alert screen flash`.
 - Pull `main` before starting each new task.
 

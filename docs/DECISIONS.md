@@ -16,9 +16,10 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 
 ## Log
 
-### 2026-10-24 — Anyone can update docs for their own change (team)
+### 2026-10-24 — Authors merge their own PRs; anyone updates docs for their own change (team)
 
-Previously only P4 could edit `docs/`, so every change meant a second hand-off and docs fell behind. Now whoever makes a change updates the docs it affects in the same PR. P4 still merges every PR and owns the docs' structure and story. Code folders keep their single owners.
+- **Self-merge.** Every PR used to wait for one person to merge it. Now the author merges once it's ready: tests pass for `api/` and `eval/`, the build passes for `web/`. Root rule files need one other teammate from P1–P3, and `CONTRACT.md` still needs both P1 and P2. Always use a merge commit, so stacked PRs stay clean.
+- **Shared docs.** Only P4 could edit `docs/`, so every change meant a hand-off and the docs fell behind. Now whoever makes a change updates the docs it affects in the same PR. P4 leads the demo script. Code folders keep their single owners.
 
 ### 2026-10-23 — Backend details (P1)
 
