@@ -26,11 +26,12 @@ This is a 48-hour hackathon project (Gator Hack V, Oct 23–25 2026). Prefer sim
 | `eval/` | P1 | Evaluation scripts and notebooks, Model Card numbers |
 | `web/` | P2 (frontend) | React app: Teach, Listen, Alert, History, Model Card page |
 | `data/` | P3 (data and integration) | Download scripts, embeddings, manifests (no raw audio in git) |
-| `docs/` | P4 (design and story) | Setup, decisions, model card, demo script |
+| `docs/` | Everyone (P4 keeps it organized) | Setup, decisions, model card, demo script |
 | Root `.md` files | Everyone, via PR reviewed by P4 | Shared rules and contracts |
 
 Rules:
-- Only edit files inside the folder your human owns. If another folder needs a change, write it up as a GitHub issue or a note in your PR description. Do not make the edit.
+- Only edit code inside the folder your human owns. If another code folder needs a change, write it up as a GitHub issue or a note in your PR description. Do not make the edit.
+- `docs/` is shared: when your change makes a doc out of date, update it in the same PR (a dependency or decision in `DECISIONS.md`, a step in `SETUP.md`, a number in `MODEL_CARD.md`). Add or fix only what your change affects; don't rewrite other people's sections or reorganize a doc. That stays with P4.
 - Never change `CONTRACT.md` on your own. Propose the change in the PR description; P1 and P2 must both agree.
 - If you need a shape the contract does not have, stop and ask your human.
 

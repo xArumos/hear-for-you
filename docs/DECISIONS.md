@@ -16,6 +16,17 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 
 ## Log
 
+### 2026-10-24 — Anyone can update docs for their own change (team)
+
+Previously only P4 could edit `docs/`, so every change meant a second hand-off and docs fell behind. Now whoever makes a change updates the docs it affects in the same PR. P4 still merges every PR and owns the docs' structure and story. Code folders keep their single owners.
+
+### 2026-10-23 — Backend details (P1)
+
+- **Detect cap is global, not per device.** One household, one API key; the cap protects our free-tier quota. Over the cap, `/detect` returns 429 with `retry_after_ms`.
+- **IDs are 8 hex characters** (`evt_1a2b3c4d`), not 4 like the CONTRACT.md examples. 4 characters would repeat after a few hundred history events. Shape and prefix are unchanged.
+- **Built-in sounds are seeded once.** Renaming or turning off a built-in survives a server restart.
+- **History `since` includes events at that exact second.** No alert is lost; the frontend skips IDs it already has.
+
 ### 2026-10-23 — Stack fixed for the event (team)
 
 - **Gemini Embedding 2 + our own detectors** instead of a pre-trained sound classifier. Embedding 2 (GA Apr 22, 2026) is the recent tech the challenge requires, puts audio and text in one space (zero-shot baseline), and lets us show our own ML.
@@ -36,4 +47,6 @@ Add a row for every dependency beyond the fixed stack in `AGENTS.md`.
 
 | Package | Folder | Why | Added by |
 | --- | --- | --- | --- |
-| _none yet_ | | | |
+| python-multipart | api | FastAPI needs it to read uploaded audio files (`/detect`, `/teach`) | P1 |
+| pytest | api (dev only) | Runs the backend tests required by api/AGENTS.md | P1 |
+| httpx | api (dev only) | FastAPI's test client needs it | P1 |
