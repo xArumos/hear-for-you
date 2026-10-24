@@ -6,6 +6,14 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
+function peakAmplitude(samples: Float32Array): number {
+  let peak = 0;
+  for (let index = 0; index < samples.length; index += 1) {
+    peak = Math.max(peak, Math.abs(samples[index]));
+  }
+  return peak;
+}
+
 export async function recordMicrophoneClip(durationMs = 3000): Promise<Blob> {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error('Microphone access is not available in this browser.');
@@ -70,5 +78,9 @@ export async function recordMicrophoneClip(durationMs = 3000): Promise<Blob> {
   }
 
   const resampled = resampleToSampleRate(samples, inputSampleRate, 16000);
+  if (peakAmplitude(resampled) < 0.01) {
+    throw new Error('No usable sound was detected. Try recording again with the sound active.');
+  }
+
   return encodeWav(resampled, 16000);
 }

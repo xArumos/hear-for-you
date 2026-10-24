@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { getHealth, getHistory, getSounds } from './api/client';
+import { useEffect, useRef, useState } from 'react';
+import { getHealth, getHistory, getSounds, teachSound } from './api/client';
 import type { HealthResponse, HistoryEvent, SoundRecord } from './api/types';
 import { recordMicrophoneClip } from './audio/recorder';
+import { countCompletedRecordings, isReadyToSave, type RecordingStep } from './teach-state';
 
 type Screen = 'listen' | 'teach' | 'record' | 'history' | 'recognized' | 'unknown' | 'attention';
 type IconName = 'door' | 'bell' | 'alarm' | 'baby' | 'dog' | 'kettle' | 'microwave' | 'phone' | 'voice' | 'glass' | 'siren' | 'water' | 'generic';
@@ -35,45 +36,95 @@ function Icon({ name, size = 22 }: { name: keyof typeof iconPaths; size?: number
   );
 }
 
-function PlaybackControl({ label, duration, available = true, compact = false }: { label: string; duration: number; available?: boolean; compact?: boolean }) {
+function PlaybackControl({ label, blob = null, duration, available = true, compact = false }: { label: string; blob?: Blob | null; duration: number; available?: boolean; compact?: boolean }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const urlRef = useRef<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [resolvedDuration, setResolvedDuration] = useState(duration);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !blob) return;
+
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+    }
+
+    const nextUrl = URL.createObjectURL(blob);
+    urlRef.current = nextUrl;
+    audio.src = nextUrl;
+
+    const handleLoadedMetadata = () => {
+      setResolvedDuration(Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : duration);
+    };
+    const handleTimeUpdate = () => setProgress(audio.currentTime || 0);
+    const handleEnded = () => {
+      setPlaying(false);
+      setProgress(audio.duration || 0);
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+      if (urlRef.current) {
+        URL.revokeObjectURL(urlRef.current);
+        urlRef.current = null;
+      }
+    };
+  }, [blob, duration]);
 
   useEffect(() => {
     if (!playing) return;
-    const timer = window.setInterval(
-      () =>
-        setProgress((current) => {
-          const next = Math.min(duration, current + 0.25);
-          if (next >= duration) setPlaying(false);
-          return next;
-        }),
-      250,
-    );
-    return () => window.clearInterval(timer);
-  }, [playing, duration]);
+    const audio = audioRef.current;
+    if (!audio) return;
 
-  if (!available) return <span className="playback-unavailable">No retained clip</span>;
+    const handlePause = () => setPlaying(false);
+    audio.addEventListener('pause', handlePause);
+    return () => audio.removeEventListener('pause', handlePause);
+  }, [playing]);
 
-  const toggle = () => {
-    if (progress >= duration) setProgress(0);
-    setPlaying((current) => !current);
+  if (!available || !blob) return <span className="playback-unavailable">No retained clip</span>;
+
+  const toggle = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audio.paused) {
+      try {
+        await audio.play();
+        setPlaying(true);
+      } catch (error) {
+        console.error('Audio playback failed:', error);
+      }
+      return;
+    }
+
+    audio.pause();
+    setPlaying(false);
+    setProgress(audio.currentTime || 0);
   };
 
   return (
     <div className={`playback ${compact ? 'compact' : ''}`}>
-      <button className="play-button" onClick={toggle} aria-label={`${playing ? 'Pause' : 'Play'} ${label} demo recording`}>
+      <button className="play-button" onClick={toggle} aria-label={`${playing ? 'Pause' : 'Play'} ${label} recording`}>
         {playing ? 'Ⅱ' : '▶'}
       </button>
+      <audio ref={audioRef} preload="auto" />
       <div className="playback-details">
         <div>
-          <span>{playing ? 'Playing demo' : 'Demo preview'}</span>
+          <span>{playing ? 'Playing clip' : 'Playback ready'}</span>
           <time>
-            {Math.floor(progress / 60)}:{String(Math.floor(progress % 60)).padStart(2, '0')} / 0:{String(duration).padStart(2, '0')}
+            {Math.floor(progress / 60)}:{String(Math.floor(progress % 60)).padStart(2, '0')} / 0:{String(Math.ceil(resolvedDuration)).padStart(2, '0')}
           </time>
         </div>
-        <div className="playback-track" role="progressbar" aria-label={`${label} playback progress`} aria-valuemin={0} aria-valuemax={duration} aria-valuenow={Math.round(progress)}>
-          <span style={{ width: `${(progress / duration) * 100}%` }} />
+        <div className="playback-track" role="progressbar" aria-label={`${label} playback progress`} aria-valuemin={0} aria-valuemax={Math.ceil(resolvedDuration)} aria-valuenow={Math.round(progress)}>
+          <span style={{ width: `${Math.min(100, (progress / Math.max(resolvedDuration, 1)) * 100)}%` }} />
         </div>
       </div>
     </div>
@@ -286,9 +337,34 @@ function Listen({ setScreen, health, sounds }: { setScreen: (s: Screen) => void;
   );
 }
 
-function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecording }: { setScreen: (s: Screen) => void; done: boolean[]; saved: boolean; startRecording: (index: number) => void; saveSound: () => void; deleteRecording: (index: number) => void }) {
-  const [selected, setSelected] = useState<IconName>('door');
-  const [name, setName] = useState('Door knock');
+function Teach({
+  setScreen,
+  recordings,
+  name,
+  setName,
+  selectedIcon,
+  setSelectedIcon,
+  readyToSave,
+  saveState,
+  saveError,
+  startRecording,
+  saveSound,
+  deleteRecording,
+}: {
+  setScreen: (s: Screen) => void;
+  recordings: RecordingStep[];
+  name: string;
+  setName: (value: string) => void;
+  selectedIcon: IconName;
+  setSelectedIcon: (value: IconName) => void;
+  readyToSave: boolean;
+  saveState: 'idle' | 'saving' | 'saved' | 'error';
+  saveError: string | null;
+  startRecording: (index: number) => void;
+  saveSound: () => void;
+  deleteRecording: (index: number) => void;
+}) {
+  const completed = countCompletedRecordings(recordings);
 
   return (
     <div className="page">
@@ -298,7 +374,7 @@ function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecord
           <h1>Teach a sound</h1>
           <p>Record a few examples so HearAlert can recognize a sound you know.</p>
         </div>
-        <span className="step-label">{done.filter(Boolean).length} of 4 recordings</span>
+        <span className="step-label">{completed} of 4 recordings</span>
       </div>
 
       <div className="teach-grid">
@@ -318,7 +394,7 @@ function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecord
               <h2>Choose an icon</h2>
               <div className="icon-grid">
                 {categories.map((category) => (
-                  <button key={category.icon} className={selected === category.icon ? 'selected' : ''} onClick={() => setSelected(category.icon)}>
+                  <button key={category.icon} className={selectedIcon === category.icon ? 'selected' : ''} onClick={() => setSelectedIcon(category.icon)}>
                     <Icon name={category.icon} />
                     <small>{category.name}</small>
                   </button>
@@ -336,18 +412,18 @@ function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecord
                 {['Example 1', 'Example 2', 'Example 3', 'Room noise'].map((label, index) => (
                   <div className="record-item" key={label}>
                     <div className="record-summary">
-                      <span className={`record-state ${done[index] ? 'done' : ''}`}>{done[index] ? <Icon name="check" size={16} /> : index + 1}</span>
+                      <span className={`record-state ${recordings[index]?.blob ? 'done' : ''}`}>{recordings[index]?.blob ? <Icon name="check" size={16} /> : index + 1}</span>
                       <span>
                         <strong>{label}</strong>
                         <small>
-                          {index === 3 ? '10 seconds' : '3 seconds'} · {done[index] ? 'Completed' : index === 0 ? 'Ready' : 'Upcoming'}
+                          {index === 3 ? '10 seconds' : '3 seconds'} · {recordings[index]?.blob ? 'Completed' : index === 0 ? 'Ready' : 'Upcoming'}
                         </small>
                       </span>
                     </div>
 
-                    {done[index] ? (
+                    {recordings[index]?.blob ? (
                       <>
-                        <PlaybackControl label={label.toLowerCase()} duration={index === 3 ? 10 : 3} />
+                        <PlaybackControl label={label.toLowerCase()} blob={recordings[index].blob} duration={index === 3 ? 10 : 3} />
                         <div className="record-actions">
                           <button onClick={() => startRecording(index)}>Re-record</button>
                           <button onClick={() => deleteRecording(index)}>Delete audio</button>
@@ -361,7 +437,7 @@ function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecord
                   </div>
                 ))}
               </div>
-              {!done.some(Boolean) && (
+              {completed === 0 && (
                 <button className="primary begin-recording" onClick={() => startRecording(0)}>
                   <Icon name="voice" />
                   Begin recording
@@ -373,30 +449,31 @@ function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecord
 
         <aside className="teach-side card">
           <div className="preview-icon">
-            <Icon name={selected} size={48} />
+            <Icon name={selectedIcon} size={48} />
           </div>
           <p>Sound preview</p>
-          <h2>{name || 'Untitled sound'}</h2>
+          <h2>{name.trim() || 'Untitled sound'}</h2>
           <div className="progress-wrap">
             <div>
               <span>Recording progress</span>
-              <strong>{done.filter(Boolean).length}/4</strong>
+              <strong>{completed}/4</strong>
             </div>
             <div className="progress">
-              <span style={{ width: `${(done.filter(Boolean).length / 4) * 100}%` }} />
+              <span style={{ width: `${(completed / 4) * 100}%` }} />
             </div>
           </div>
-          <button className="primary" disabled={!done.every(Boolean) || !name || saved} onClick={saveSound}>
-            {saved ? <><Icon name="check" />Sound saved</> : 'Save and check sound'}
+          <button className="primary" disabled={!readyToSave || saveState === 'saving'} onClick={saveSound}>
+            {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? <><Icon name="check" />Sound saved</> : 'Save and check sound'}
           </button>
-          <p className="side-help">{saved ? 'Your sound is saved and ready to use.' : 'Complete the guided recording to continue.'}</p>
+          {saveError ? <p role="alert" className="recording-error">{saveError}</p> : null}
+          <p className="side-help">{saveState === 'saved' ? 'Your sound is saved and ready to use.' : saveState === 'error' ? 'The save request failed. Check the recordings and try again.' : 'Complete the guided recording to continue.'}</p>
         </aside>
       </div>
     </div>
   );
 }
 
-function Recording({ setScreen, index, saveRecording }: { setScreen: (s: Screen) => void; index: number; saveRecording: () => void }) {
+function Recording({ setScreen, index, completeRecording }: { setScreen: (s: Screen) => void; index: number; completeRecording: (index: number, blob: Blob) => void }) {
   const duration = index === 3 ? 10 : 3;
   const [time, setTime] = useState(duration);
   const [recording, setRecording] = useState(false);
@@ -420,10 +497,11 @@ function Recording({ setScreen, index, saveRecording }: { setScreen: (s: Screen)
     setError(null);
     setRecording(true);
     try {
-      await recordMicrophoneClip(duration * 1000);
+      const blob = await recordMicrophoneClip(duration * 1000);
       setTime(0);
       setRecording(false);
-      saveRecording();
+      completeRecording(index, blob);
+      setScreen('teach');
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : 'Unable to record microphone audio.';
       setError(message);
@@ -442,7 +520,7 @@ function Recording({ setScreen, index, saveRecording }: { setScreen: (s: Screen)
       <p>
         {index === 3
           ? 'Final step: capture the normal background sound in this room.'
-          : 'Make your sound during the 3-second recording. The next step will open automatically.'}
+          : 'Make your sound during the 3-second recording. The recording will return to the Teach screen when complete.'}
       </p>
 
       <section className={`record-panel card ${recording ? 'is-recording' : ''}`}>
@@ -589,9 +667,17 @@ function Alert({ type, dismiss, teach }: { type: 'recognized' | 'unknown' | 'att
 export default function App() {
   const [screen, setScreen] = useState<Screen>('listen');
   const [dark, setDark] = useState(false);
-  const [recordings, setRecordings] = useState([false, false, false, false]);
+  const [recordings, setRecordings] = useState<RecordingStep[]>([
+    { blob: null, valid: false },
+    { blob: null, valid: false },
+    { blob: null, valid: false },
+    { blob: null, valid: false },
+  ]);
   const [recordingIndex, setRecordingIndex] = useState(0);
-  const [soundSaved, setSoundSaved] = useState(false);
+  const [soundName, setSoundName] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState<IconName>('door');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [sounds, setSounds] = useState<SoundRecord[]>([]);
   const [history, setHistory] = useState<HistoryEvent[]>([]);
@@ -614,24 +700,58 @@ export default function App() {
     void loadData();
   }, []);
 
+  const readyToSave = isReadyToSave(soundName, recordings);
+
   const startRecording = (index: number) => {
     setRecordingIndex(index);
     setScreen('record');
   };
 
-  const saveRecording = () => {
-    setRecordings((current) => current.map((saved, index) => (index === recordingIndex ? true : saved)));
-    if (recordingIndex < 3) {
-      setRecordingIndex((current) => current + 1);
-    } else {
-      setSoundSaved(true);
-      setScreen('teach');
+  const completeRecording = (index: number, blob: Blob) => {
+    setRecordings((current) => current.map((recording, recordingIndex) => (recordingIndex === index ? { blob, valid: true } : recording)));
+    setSaveState('idle');
+    setSaveError(null);
+    if (index < 3) {
+      setRecordingIndex(index + 1);
     }
   };
 
   const deleteRecording = (index: number) => {
-    setRecordings((current) => current.map((saved, itemIndex) => (itemIndex === index ? false : saved)));
-    setSoundSaved(false);
+    setRecordings((current) => current.map((recording, itemIndex) => (itemIndex === index ? { blob: null, valid: false } : recording)));
+    setSaveState('idle');
+    setSaveError(null);
+  };
+
+  const saveSound = async () => {
+    if (!readyToSave || saveState === 'saving') {
+      return;
+    }
+
+    setSaveState('saving');
+    setSaveError(null);
+
+    try {
+      const payload = new FormData();
+      payload.append('name', soundName.trim());
+      payload.append('icon', selectedIcon);
+
+      recordings.forEach((recording, index) => {
+        if (!recording.blob) {
+          throw new Error(`Missing required recording ${index + 1}.`);
+        }
+
+        const fieldName = index === 3 ? 'room' : `example_${index + 1}`;
+        payload.append(fieldName, recording.blob, `${fieldName}.wav`);
+      });
+
+      await teachSound(payload);
+      setSaveState('saved');
+      setSaveError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The sound could not be saved. Please try again.';
+      setSaveState('error');
+      setSaveError(message);
+    }
   };
 
   if (['recognized', 'unknown', 'attention'].includes(screen)) {
@@ -644,9 +764,22 @@ export default function App() {
         {screen === 'listen' ? (
           <Listen setScreen={setScreen} health={health} sounds={sounds} />
         ) : screen === 'teach' ? (
-          <Teach setScreen={setScreen} done={recordings} saved={soundSaved} startRecording={startRecording} saveSound={() => setSoundSaved(true)} deleteRecording={deleteRecording} />
+          <Teach
+            setScreen={setScreen}
+            recordings={recordings}
+            name={soundName}
+            setName={setSoundName}
+            selectedIcon={selectedIcon}
+            setSelectedIcon={setSelectedIcon}
+            readyToSave={readyToSave}
+            saveState={saveState}
+            saveError={saveError}
+            startRecording={startRecording}
+            saveSound={saveSound}
+            deleteRecording={deleteRecording}
+          />
         ) : screen === 'record' ? (
-          <Recording key={recordingIndex} setScreen={setScreen} index={recordingIndex} saveRecording={saveRecording} />
+          <Recording key={recordingIndex} setScreen={setScreen} index={recordingIndex} completeRecording={completeRecording} />
         ) : (
           <History events={history} />
         )}
