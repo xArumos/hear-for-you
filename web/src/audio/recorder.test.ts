@@ -17,8 +17,10 @@ describe('Microphone permission diagnostics', () => {
 
   test('calls getUserMedia and returns a valid WAV blob when mic input is present', async () => {
     const calls: string[] = [];
+    const track = { readyState: 'live', stop() {}, addEventListener() {}, removeEventListener() {} };
     const stream = {
-      getTracks: () => [{ stop: () => {} }],
+      getTracks: () => [track],
+      getAudioTracks: () => [track],
     };
 
     class FakeAudioWorkletNode {
@@ -31,6 +33,7 @@ describe('Microphone permission diagnostics', () => {
       static instances = 0;
       state = 'running';
       sampleRate = 48000;
+      destination = {};
       audioWorklet = {
         addModule: async () => {},
       };
@@ -124,4 +127,11 @@ describe('Microphone permission diagnostics', () => {
       }
     }
   });
+});
+
+ test('non-permission failures retain their cause', () => {
+  for (const name of ['NotFoundError', 'NotReadableError', 'AbortError', 'OverconstrainedError', 'SecurityError']) {
+    assert.doesNotMatch(explainMicrophoneError(new DOMException('test', name)), /permission was denied/);
+  }
+  assert.equal(explainMicrophoneError(new Error('Invalid WAV duration')), 'Invalid WAV duration');
 });
