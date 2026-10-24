@@ -1,16 +1,16 @@
-# HearAlert
+# Hear For You
 
-**Sound awareness for deaf and hard-of-hearing people.** Teach HearAlert any sound from three examples (your door knock, your dog, your kettle) and it flashes a visual alert when it hears that sound again. When something loud happens that it doesn't recognize, it tells you what it heard in plain words.
+**Sound awareness for deaf and hard-of-hearing people.** Teach Hear For You any sound from three examples (your door knock, your dog, your kettle) and it flashes a visual alert when it hears that sound again. When something loud happens that it doesn't recognize, it tells you what it heard in plain words.
 
 Built in 48 hours at [Gator Hack V](https://gatorhack2026.devpost.com/) (UF AI Days 2026).
 
-> HearAlert is not a certified life-safety device. It does not replace a smoke-alarm strobe or bed shaker.
+> Hear For You is not a certified life-safety device. It does not replace a smoke-alarm strobe or bed shaker.
 
 <!-- TODO (P4): add a demo GIF here -->
 
 ## Why
 
-About 430 million people worldwide have disabling hearing loss. Phone sound-recognition features exist, but Apple's custom sounds only cover electronic beeps, and neither Apple's nor Google's tells you about sounds it doesn't know. HearAlert learns any sound, runs in any modern browser, and describes the unknown.
+About 430 million people worldwide have disabling hearing loss. Phone sound-recognition features exist, but Apple's custom sounds only cover electronic beeps, and neither Apple's nor Google's tells you about sounds it doesn't know. Hear For You learns any sound, runs in any modern browser, and describes the unknown.
 
 ## How it works
 

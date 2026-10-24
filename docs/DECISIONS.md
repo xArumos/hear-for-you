@@ -19,6 +19,13 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 
 ## Log
 
+### 2026-10-24 — Renamed the app to Hear For You (team)
+
+The app is now **Hear For You**, with the motto "Here when it matters. Hearing what matters.", from P4's Figma design. All
+docs and UI text use the new name. Lowercase `hearalert` stays as a technical identifier only (GitHub repo and folder,
+`hearalert.db`, package and logger names): renaming those would break clones, CI and everyone's local database for no
+user-visible gain. Approved by P1 and P3.
+
 ### 2026-10-24 — /api/metrics shows only measured numbers (P1)
 
 - `eval/write_metrics.py` fills a field only when the script that measures it has written its results CSV; everything else is `null`, so the Model Card page never shows a placeholder as if it were real. Today only the trained built-in accuracy is measured.
@@ -78,7 +85,7 @@ GitHub Actions runs three checks on every PR: `api tests`, `web build` and `no a
 - **uv for Python, npm for Node.** One lockfile each; same versions on every machine.
 - **No raw audio in git.** ESC-50 is CC BY-NC and our recordings are personal; we commit embeddings and manifests.
 
-### 2026-10-23 — Pivoted from bird detection to HearAlert (team)
+### 2026-10-23 — Pivoted from bird detection to Hear For You (team)
 
 Team preferred a non-bird topic. Same "record, detect, alert" pattern, stronger social impact, and Gemini becomes core.
 

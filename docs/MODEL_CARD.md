@@ -1,4 +1,4 @@
-# Model Card — HearAlert detectors
+# Model Card — Hear For You detectors
 
 Numbers here are filled in by `eval/` (P1) and must match `api/metrics.json` and the in-app Model Card page. Replace every `TBD` with a measured value and the date it was measured.
 
