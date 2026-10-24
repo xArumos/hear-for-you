@@ -1,6 +1,7 @@
 """Detectors. The taught-sound match rule lives here so /teach's self-check and /detect agree.
 
-/detect decision order (api/AGENTS.md): taught match -> built-in classifier -> loud unknown -> none.
+/detect decision order (api/AGENTS.md): smoke-alarm rule -> taught match -> built-in classifier
+-> loud unknown -> none.
 """
 
 import logging
@@ -12,13 +13,14 @@ import joblib
 import numpy as np
 import sklearn
 
-from app import gemini, ratelimit, store
+from app import gemini, ratelimit, smoke_alarm, store
 from app.config import settings
 
 log = logging.getLogger("hearalert.detectors")
 
 LOUD_DBFS = -20.0
 BUILTIN_MIN_PROB = 0.6
+SMOKE_ALARM_ID = "builtin_smoke_alarm"
 BUILTIN_MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "builtin_clf.joblib"
 OTHER = "other"
 
@@ -111,8 +113,19 @@ def match_builtin(vec: np.ndarray) -> tuple[str, float] | None:
     return label, p
 
 
-def detect(wav: bytes, level_db: float) -> dict[str, object]:
-    """Run one validated clip through the detectors. Saves every result except "none" to history."""
+def detect(wav: bytes, samples: np.ndarray, level_db: float) -> dict[str, object]:
+    """Run one validated clip through the detectors. Saves every result except "none" to history.
+
+    The smoke-alarm rule runs first, on the raw samples: no embedding, so it is never rate-limited and
+    still works when Gemini is down. Everything after it costs a Gemini call and is rate-limited.
+    """
+    alarm = smoke_alarm.detect(samples)
+    if alarm.detected:
+        sound = store.get_sound(SMOKE_ALARM_ID)
+        if sound["enabled"]:
+            return store.add_event("builtin", str(sound["name"]), SMOKE_ALARM_ID, alarm.score, None)
+
+    ratelimit.detect_limiter.check()
     vec = gemini.embed_audio(wav)
 
     match = match_taught(vec, store.taught_models())

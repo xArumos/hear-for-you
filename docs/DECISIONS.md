@@ -14,9 +14,17 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 | Detect cap | 1 call per second | Stay under free-tier limits | `MAX_DETECT_PER_SEC` |
 | Describe cap | 1 call per 10 s | At most 6 describe calls a minute (12 with retries), under 3.5 Flash-Lite's 15 RPM | `MAX_DESCRIBE_PER_SEC` |
 | Gemini timeout / retries | 10 s / 1 retry on 429 or 5xx | Fail fast during a live demo | `api/` |
+| Smoke-alarm rule | Beeps 0.3–0.8 s, gaps 0.3–0.8 s or 1.1–2.2 s, tone ≥ 40% of frame energy, ±5% steady | Tolerant T3 timing for phone mics and echo; tune with real recordings (#14) | `api/app/smoke_alarm.py` |
 | Taught threshold mix | 0.5 (midpoint) | Threshold sits halfway between the room's best score and cos(example 1, example 2); tune with eval | `THRESHOLD_MIX` in `api/app/teach.py` |
 
 ## Log
+
+### 2026-10-24 — Smoke alarm is built in, detected by a rule (P1)
+
+- **Why not a tutorial:** asking every user to set off their own alarm (often on a high ceiling, painfully loud, sometimes wired to the whole building) to teach it was too much. The team wants smoke alarm built in.
+- **Why a rule:** ESC-50 has no smoke alarms. Alarms are standardized: the T3 pattern (three 0.5 s beeps, 0.5 s apart, 1.5 s pause), usually a ~3 kHz piezo tone, some 520 Hz. `api/app/smoke_alarm.py` looks for a steady tone in those bands switching on and off in that rhythm. Any 3 s window of T3 holds at least two beeps.
+- **Runs first, before the rate limiter and without Gemini:** a smoke alarm is never throttled, costs no quota, and still fires if Gemini is down. Live: ~35–140 ms vs ~800 ms for the embedding path. `confidence` is the mean tonality of the beeps (a rule score, not calibrated).
+- **Known gap:** not yet measured on real alarms. Issue #14 asks P3 for real smoke-alarm clips and look-alikes (microwave beeps), which also lets us add smoke alarm to the classifier later.
 
 ### 2026-10-24 — Built-in classifier (P1)
 

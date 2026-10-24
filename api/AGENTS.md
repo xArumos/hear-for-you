@@ -12,6 +12,8 @@ api/
     gemini.py        # the ONLY module that imports google-genai
     audio.py         # WAV validation: 16 kHz, mono, 16-bit, 3.0 s (room 10.0 s)
     detectors.py     # built-in classifier, personal prototypes, unknown logic
+    smoke_alarm.py   # rule-based T3 smoke-alarm detector (no embedding)
+    teach.py         # /teach: embeddings, prototype, self-check
     store.py         # SQLite: sounds, prototypes (as BLOB), history
     ratelimit.py     # MAX_DETECT_PER_SEC cap for /detect
     errors.py        # contract error shape + exception handlers
@@ -29,8 +31,9 @@ api/
 - All Gemini calls go through `gemini.py`, with: 10 s timeout, one retry on 429/5xx, then raise an error that maps to the contract's `rate_limited` or `upstream_error`.
 - Embed with `gemini-embedding-2`, `output_dimensionality = EMBED_DIM` (768). Normalize vectors to unit length before storing or comparing.
 - Validate audio before any Gemini call. A bad clip returns 400 `bad_audio` and costs no API call.
-- Enforce `MAX_DETECT_PER_SEC` server-side; over the cap returns 429 with `retry_after_ms`.
+- Enforce `MAX_DETECT_PER_SEC` server-side; over the cap returns 429 with `retry_after_ms`. The smoke-alarm check runs before the cap (it costs no API call).
 - `/detect` decision order:
+  0. Smoke-alarm rule on the raw audio (T3 pattern, `smoke_alarm.py`). A match returns `builtin_smoke_alarm` with no Gemini call.
   1. Embed the clip.
   2. Score every enabled taught sound (cosine to its prototype vs. to its room vectors). A match above its threshold wins.
   3. Otherwise run the built-in classifier; a calibrated probability above 0.6 wins.
