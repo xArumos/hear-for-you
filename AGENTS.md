@@ -10,9 +10,9 @@ A user teaches any sound from 3 examples. The app flashes an alert when it hears
 Full product context: `CONTEXT.md`. API shapes: `CONTRACT.md`. Environment: `docs/SETUP.md`.
 
 **Name:** the app is called **Hear For You** (motto: "Here when it matters. Hearing what matters."). It was called
-HearAlert until Oct 24. Use "Hear For You" in all UI text, docs and messages. Lowercase `hearalert` survives only as
-a technical identifier: the GitHub repo and folder, `hearalert.db`, package names (`hearalert-api`, `hearalert-data`)
-and logger names (`hearalert.api`). Don't rename those, and don't call the app HearAlert anywhere new.
+HearAlert until Oct 24. Use "Hear For You" in all UI text, docs and messages. The technical identifier is
+`hear-for-you`: the GitHub repo (`xArumos/hear-for-you`), `hear-for-you.db`, package names (`hear-for-you-api`,
+`hear-for-you-data`) and logger names (`hear-for-you.api`). Don't use `hearalert` or HearAlert anywhere new.
 
 This is a 48-hour hackathon project (Gator Hack V, Oct 23–25 2026). Prefer simple, working code over clever code.
 

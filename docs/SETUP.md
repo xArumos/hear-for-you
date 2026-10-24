@@ -18,8 +18,8 @@ Check: `uv --version && node --version && ffmpeg -version | head -1`.
 ## 2. Get the code
 
 ```bash
-git clone https://github.com/xArumos/hearalert.git
-cd hearalert
+git clone https://github.com/xArumos/hear-for-you.git
+cd hear-for-you
 ```
 
 ## 3. Secrets
@@ -37,7 +37,7 @@ DESCRIBE_MODEL=gemini-3.5-flash-lite
 EMBED_DIM=768
 MAX_DETECT_PER_SEC=1
 MAX_DESCRIBE_PER_SEC=0.1
-DB_PATH=./hearalert.db
+DB_PATH=./hear-for-you.db
 ```
 
 If your `api/.env` still says `DESCRIBE_MODEL=gemini-3.8-flash`, change it to `gemini-3.5-flash-lite` (or delete the line to use the default). The file overrides the code's default.

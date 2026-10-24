@@ -427,7 +427,7 @@ wheels = [
 ]
 
 [[package]]
-name = "hearalert-api"
+name = "hear-for-you-api"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

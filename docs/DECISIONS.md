@@ -26,6 +26,13 @@ docs and UI text use the new name. Lowercase `hearalert` stays as a technical id
 `hearalert.db`, package and logger names): renaming those would break clones, CI and everyone's local database for no
 user-visible gain. Approved by P1 and P3.
 
+### 2026-10-24 — Technical identifiers renamed to hear-for-you (P1, P3)
+
+Superseding the entry above: the GitHub repo is now `xArumos/hear-for-you`, and the technical identifiers follow it
+for consistency: `hear-for-you.db`, `hear-for-you-api`, `hear-for-you-data`, and `hear-for-you.*` loggers. GitHub
+redirects the old repo URL. An existing local `hearalert.db` is no longer used by default: rename it to
+`hear-for-you.db` to keep taught sounds. Approved by P1 and P3.
+
 ### 2026-10-24 — /api/metrics shows only measured numbers (P1)
 
 - `eval/write_metrics.py` fills a field only when the script that measures it has written its results CSV; everything else is `null`, so the Model Card page never shows a placeholder as if it were real. Today only the trained built-in accuracy is measured.

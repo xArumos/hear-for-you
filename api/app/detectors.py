@@ -16,7 +16,7 @@ import sklearn
 from app import gemini, ratelimit, smoke_alarm, store
 from app.config import settings
 
-log = logging.getLogger("hearalert.detectors")
+log = logging.getLogger("hear-for-you.detectors")
 
 LOUD_DBFS = -20.0
 BUILTIN_MIN_PROB = 0.6
