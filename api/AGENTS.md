@@ -13,6 +13,7 @@ api/
     audio.py         # WAV validation: 16 kHz, mono, 16-bit, 3.0 s (room 10.0 s)
     detectors.py     # built-in classifier, personal prototypes, unknown logic
     store.py         # SQLite: sounds, prototypes (as BLOB), history
+    ratelimit.py     # MAX_DETECT_PER_SEC cap for /detect
     errors.py        # contract error shape + exception handlers
   models/
     builtin_clf.joblib   # trained by eval/, loaded at startup
