@@ -66,8 +66,8 @@ Read `AGENTS.md`, `web/AGENTS.md` and `CONTRACT.md` first. Where this design dis
 9. **Screens the design doesn't cover:** the Model Card page (`GET /api/metrics`) and error / offline / permission
    states beyond the ones shown. Follow the same visual style.
 10. **App name: "Hear For You".** The team renamed the app (Oct 24). Use "Hear For You" and the motto "Here when it
-    matters. Hearing what matters." in the UI, as the design does. Code names stay as they are (repo `hearalert`,
-    `/api/...` paths, IDs); the rest of the docs may still say "HearAlert" until they're updated.
+    matters. Hearing what matters." in the UI, as the design does. Technical names stay as they are (repo
+    `hearalert`, `/api/...` paths, IDs); see the "Name" note in `AGENTS.md`.
 11. **No accounts.** The design's sign-in, create account, verify email, reset password, session-expired screens and
     the Account page are not supported: the API has no users or auth endpoints, and adding them is out of scope. Don't
     build them and don't gate anything behind sign-in. Show My Sounds and History to everyone. Drop the "Requires
