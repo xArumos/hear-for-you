@@ -12,7 +12,11 @@ api/
     gemini.py        # the ONLY module that imports google-genai
     audio.py         # WAV validation: 16 kHz, mono, 16-bit, 3.0 s (room 10.0 s)
     detectors.py     # built-in classifier, personal prototypes, unknown logic
+    smoke_alarm.py   # rule-based T3 smoke-alarm detector (no embedding)
+    teach.py         # /teach: embeddings, prototype, self-check
+    metrics.py       # serves metrics.json for GET /api/metrics
     store.py         # SQLite: sounds, prototypes (as BLOB), history
+    ratelimit.py     # MAX_DETECT_PER_SEC cap for /detect
     errors.py        # contract error shape + exception handlers
   models/
     builtin_clf.joblib   # trained by eval/, loaded at startup
@@ -28,12 +32,13 @@ api/
 - All Gemini calls go through `gemini.py`, with: 10 s timeout, one retry on 429/5xx, then raise an error that maps to the contract's `rate_limited` or `upstream_error`.
 - Embed with `gemini-embedding-2`, `output_dimensionality = EMBED_DIM` (768). Normalize vectors to unit length before storing or comparing.
 - Validate audio before any Gemini call. A bad clip returns 400 `bad_audio` and costs no API call.
-- Enforce `MAX_DETECT_PER_SEC` server-side; over the cap returns 429 with `retry_after_ms`.
+- Enforce `MAX_DETECT_PER_SEC` server-side; over the cap returns 429 with `retry_after_ms`. The smoke-alarm check runs before the cap (it costs no API call).
 - `/detect` decision order:
+  0. Smoke-alarm rule on the raw audio (T3 pattern, `smoke_alarm.py`). A match returns `builtin_smoke_alarm` with no Gemini call.
   1. Embed the clip.
   2. Score every enabled taught sound (cosine to its prototype vs. to its room vectors). A match above its threshold wins.
   3. Otherwise run the built-in classifier; a calibrated probability above 0.6 wins.
-  4. Otherwise, if `level_db` is above the "loud" cutoff (default −20 dBFS), call Gemini 3.8 Flash with the clip and the prompt in `gemini.py`, and return `kind: "unknown"`.
+  4. Otherwise, if `level_db` is above the "loud" cutoff (default −20 dBFS), call the describe model (`gemini-3.5-flash-lite`, at most 1 call per 10 s) with the clip and the prompt in `gemini.py`, and return `kind: "unknown"`.
   5. Otherwise `kind: "none"`.
 - The describe prompt: *"Describe this sound in one short, plain sentence for someone who cannot hear it. Name the likely source. No preamble."* Keep the output under 80 characters; truncate if longer.
 - Never store audio. Store embeddings and metadata only.
