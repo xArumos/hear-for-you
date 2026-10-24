@@ -26,7 +26,7 @@ eval/
 - Also report accuracy on our own venue recordings (ESC-50 has a known leakage caveat).
 - Fix random seeds (`seed = 42`). Each script prints its numbers and writes a CSV to `results/`.
 - `write_metrics.py` must output exactly the `/api/metrics` shape in `CONTRACT.md`, with `updated_at`.
-- After updating numbers, also update `docs/MODEL_CARD.md` (ask P4 to merge).
+- After updating numbers, also update `docs/MODEL_CARD.md` in the same PR.
 
 ## Run order
 
