@@ -16,12 +16,12 @@ Local recordings have not yet been supplied; the recording tools below are ready
 
 ## Product purpose and class selection
 
-This dataset supports HearAlert's built-in classifier and its rejection of unrelated sounds as `other`.
+This dataset supports Hear For You's built-in classifier and its rejection of unrelated sounds as `other`.
 It supplies classifier inputs, not measured detection accuracy or real-world false-alarm rates.
 Training, calibration, thresholds, and evaluation belong to P1 in `eval/`.
 Smoke-alarm recognition needs separate recordings and is deliberately excluded from this dataset.
 
-| HearAlert label | ESC-50 category | Clips |
+| Hear For You label | ESC-50 category | Clips |
 | --- | --- | --- |
 | `builtin_dog_bark` | `dog` | 40 |
 | `builtin_crying_baby` | `crying_baby` | 40 |
@@ -74,7 +74,7 @@ data/
 Manifest columns are exactly `clip_id,path,label,source,fold,recorded_at,device`.
 `clip_id` is the upstream filename stem; `path` is relative to the repository root and points to a converted WAV.
 `source` is `esc50`; recording dates and devices are blank because they are unavailable.
-Rows are ordered by numeric fold, HearAlert label, and clip ID.
+Rows are ordered by numeric fold, Hear For You label, and clip ID.
 Matrix row `i` always corresponds to manifest row `i`, excluding the header.
 The embedder verifies this manifest against the deterministic upstream selection before making requests.
 

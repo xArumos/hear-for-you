@@ -5,9 +5,14 @@ It is the single source of truth. `CLAUDE.md`, `GEMINI.md` and `.github/copilot-
 
 ## 1. What we are building
 
-HearAlert: a web app that turns household sounds into visual alerts for deaf and hard-of-hearing users.
+Hear For You: a web app that turns household sounds into visual alerts for deaf and hard-of-hearing users.
 A user teaches any sound from 3 examples. The app flashes an alert when it hears that sound again, and it describes loud sounds it does not recognize.
 Full product context: `CONTEXT.md`. API shapes: `CONTRACT.md`. Environment: `docs/SETUP.md`.
+
+**Name:** the app is called **Hear For You** (motto: "Here when it matters. Hearing what matters."). It was called
+HearAlert until Oct 24. Use "Hear For You" in all UI text, docs and messages. Lowercase `hearalert` survives only as
+a technical identifier: the GitHub repo and folder, `hearalert.db`, package names (`hearalert-api`, `hearalert-data`)
+and logger names (`hearalert.api`). Don't rename those, and don't call the app HearAlert anywhere new.
 
 This is a 48-hour hackathon project (Gator Hack V, Oct 23–25 2026). Prefer simple, working code over clever code.
 

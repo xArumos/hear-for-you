@@ -1,11 +1,11 @@
 # CONTEXT.md — product context
 
-Paste this file into any chat-based AI (ChatGPT, Gemini, Claude in a browser) before asking it for help on HearAlert.
+Paste this file into any chat-based AI (ChatGPT, Gemini, Claude in a browser) before asking it for help on Hear For You.
 Agents working inside the repo also read `AGENTS.md`.
 
 ## One-line pitch
 
-HearAlert learns any sound from three examples, including the ones Apple can't, and tells you what it heard even when it has never heard it before.
+Hear For You learns any sound from three examples, including the ones Apple can't, and tells you what it heard even when it has never heard it before.
 
 ## The problem
 

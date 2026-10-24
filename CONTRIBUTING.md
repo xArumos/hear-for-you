@@ -1,4 +1,4 @@
-# Contributing to HearAlert
+# Contributing to Hear For You
 
 Thanks for helping. This guide works for both team members and outside contributors.
 

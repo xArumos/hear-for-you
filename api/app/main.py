@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(title="HearAlert API", lifespan=lifespan)
+app = FastAPI(title="Hear For You API", lifespan=lifespan)
 install_handlers(app)
 
 

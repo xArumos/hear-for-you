@@ -1,4 +1,4 @@
-"""Convert audio to HearAlert's loudest three-second PCM WAV window."""
+"""Convert audio to Hear For You's loudest three-second PCM WAV window."""
 from __future__ import annotations
 
 import argparse
