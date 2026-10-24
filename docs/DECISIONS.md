@@ -16,6 +16,10 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 
 ## Log
 
+### 2026-10-24 — CI on every PR; no direct pushes to main (P1)
+
+GitHub Actions runs three checks on every PR: `api tests`, `web build` and `no audio or secrets`. With self-merge, nobody else has to look at a PR before it lands, so CI is the safety net. `main` only accepts PRs with all three checks green.
+
 ### 2026-10-24 — Authors merge their own PRs; anyone updates docs for their own change (team)
 
 - **Self-merge.** Every PR used to wait for one person to merge it. Now the author merges once it's ready: tests pass for `api/` and `eval/`, the build passes for `web/`. Root rule files need one other teammate from P1–P3, and `CONTRACT.md` still needs both P1 and P2. Always use a merge commit, so stacked PRs stay clean.

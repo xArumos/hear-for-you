@@ -1,0 +1,86 @@
+# Runs on every PR and on main. Merge only when all three checks are green (AGENTS.md §9).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: api tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          working-directory: api
+          enable-cache: true
+      # --locked fails if pyproject.toml changed without updating uv.lock.
+      - run: uv sync --locked
+      # Tests mock Gemini, so CI needs no API key and never calls the network.
+      - run: uv run pytest
+
+  web:
+    name: web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check for the web app
+        id: app
+        run: |
+          if [ ! -f web/package.json ]; then
+            echo "No web/package.json on this branch yet; nothing to build."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ ! -f web/package-lock.json ]; then
+            echo "::error file=web/package.json::web/package-lock.json is missing. Run 'npm install' in web/ and commit package-lock.json."
+            exit 1
+          fi
+          echo "present=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v7
+        if: steps.app.outputs.present == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - if: steps.app.outputs.present == 'true'
+        working-directory: web
+        run: npm ci
+      - if: steps.app.outputs.present == 'true'
+        working-directory: web
+        run: npm run build
+
+  hygiene:
+    name: no audio or secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Block audio, databases and .env files
+        run: |
+          bad=$(git ls-files | grep -iE '\.(wav|mp3|flac|ogg|m4a|webm|db|sqlite|sqlite3)$|(^|/)\.env$' || true)
+          if [ -n "$bad" ]; then
+            echo "$bad" | while read -r f; do echo "::error file=$f::Never commit audio, databases or .env files (AGENTS.md §5)."; done
+            exit 1
+          fi
+      - name: Block Gemini API keys
+        # -l prints file names only, so a leaked key never shows up in the CI log.
+        run: |
+          if git grep -lE 'AIza[0-9A-Za-z_-]{35}'; then
+            echo "::error::A Google API key is committed in the files above. Remove it and rotate the key in AI Studio."
+            exit 1
+          fi
