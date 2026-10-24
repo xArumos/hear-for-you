@@ -53,7 +53,7 @@ def reset_limiters() -> None:
 
 @pytest.fixture(autouse=True)
 def temp_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
-    """Point the app's default database at a fresh seeded file so route tests never touch ./hearalert.db."""
+    """Point the app's default database at a fresh seeded file so route tests never touch ./hear-for-you.db."""
     path = str(tmp_path / "app.db")
     monkeypatch.setattr(store, "settings", dataclasses.replace(store.settings, db_path=path))
     store.init_db()

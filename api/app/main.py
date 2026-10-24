@@ -13,7 +13,7 @@ from app.config import settings
 from app.errors import BadRequest, install_handlers
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-log = logging.getLogger("hearalert.api")
+log = logging.getLogger("hear-for-you.api")
 
 
 @asynccontextmanager

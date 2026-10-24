@@ -40,7 +40,7 @@ def load_settings(path: Path = ENV_PATH) -> Settings:
         embed_dim=int(env.get("EMBED_DIM", "768")),
         max_detect_per_sec=float(env.get("MAX_DETECT_PER_SEC", "1")),
         max_describe_per_sec=float(env.get("MAX_DESCRIBE_PER_SEC", "0.1")),
-        db_path=env.get("DB_PATH", "./hearalert.db"),
+        db_path=env.get("DB_PATH", "./hear-for-you.db"),
     )
 
 

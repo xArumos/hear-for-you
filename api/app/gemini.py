@@ -13,7 +13,7 @@ from google.genai import errors, types
 from app.config import settings
 from app.errors import ApiError, RateLimited, UpstreamError
 
-log = logging.getLogger("hearalert.gemini")
+log = logging.getLogger("hear-for-you.gemini")
 
 TIMEOUT_MS = 10_000
 RETRY_DELAY_S = 0.5
