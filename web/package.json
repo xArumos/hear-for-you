@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --force",
     "lint": "tsc --noEmit",
     "test": "node --test --experimental-strip-types src/**/*.test.ts",
     "build": "tsc -b && vite build",

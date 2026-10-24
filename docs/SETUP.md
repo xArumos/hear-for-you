@@ -61,6 +61,10 @@ npm run dev
 ```
 
 Vite serves on `http://localhost:5173` and proxies `/api` to port 8000.
+`npm run dev` refreshes Vite's optimized dependencies at startup. Stop the previous
+server before restarting; an occupied port now reports an error instead of silently
+choosing another port. For a production build, run `npm run build` followed by
+`npm run preview` and open `http://localhost:4173` (also proxies `/api` to port 8000).
 To build against fixtures without the backend: `VITE_USE_FIXTURES=1 npm run dev`.
 
 ## 6. Test on a phone (microphone needs HTTPS)
@@ -104,6 +108,7 @@ git checkout -b pN/<feature>
 
 | Symptom | Fix |
 | --- | --- |
+| Blank screen with `504 Outdated Optimize Dep` for React modules | Stop the old Vite process, restart with `npm run dev`, then hard-refresh `http://localhost:5173`. Avoid running multiple dev servers against the same checkout. |
 | `429 RESOURCE_EXHAUSTED` | Your key hit the free-tier limit. Wait a minute, or check limits at aistudio.google.com/rate-limit |
 | Mic permission never appears on phone | You're on `http://`. Use the cloudflared HTTPS URL |
 | `bad_audio` from the API | Clip is not 16 kHz mono 16-bit WAV of 3.0 s; check `web/src/audio/wav.ts` |
