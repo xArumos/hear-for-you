@@ -1,20 +1,27 @@
 """FastAPI app. Routes only; logic lives in the other app modules."""
 
 import logging
-import secrets
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, Request, Response, UploadFile
 
-from app import audio, gemini, ratelimit
+from app import audio, gemini, ratelimit, store
 from app.config import settings
 from app.errors import install_handlers
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("hearalert.api")
 
-app = FastAPI(title="HearAlert API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    store.init_db()
+    yield
+
+
+app = FastAPI(title="HearAlert API", lifespan=lifespan)
 install_handlers(app)
 
 
@@ -55,7 +62,7 @@ def detect(
     # Detectors (taught, built-in, unknown) are not wired yet; every clip is "none" for now.
     request.state.kind = "none"
     return {
-        "event_id": f"evt_{secrets.token_hex(2)}",
+        "event_id": store.new_id("evt"),
         "kind": "none",
         "label": None,
         "sound_id": None,
