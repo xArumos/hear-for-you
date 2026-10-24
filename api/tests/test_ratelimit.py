@@ -59,3 +59,13 @@ def test_reset_clears_window() -> None:
     limiter.check()
     limiter.reset()
     limiter.check()
+
+
+def test_allow_returns_false_instead_of_raising() -> None:
+    clock = FakeClock()
+    limiter = RateLimiter(0.1, clock=clock)
+    assert limiter.allow() is True
+    clock.now += 9.9
+    assert limiter.allow() is False
+    clock.now += 0.1
+    assert limiter.allow() is True

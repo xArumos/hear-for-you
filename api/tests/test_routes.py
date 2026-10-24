@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import gemini, store
+from app.config import settings
 from app.errors import RateLimited, UpstreamError
 from tests.conftest import make_wav
 
@@ -28,7 +29,7 @@ def test_health(client: TestClient) -> None:
     assert res.status_code == 200
     assert res.json() == {
         "ok": True,
-        "models": {"embed": "gemini-embedding-2", "describe": "gemini-3.8-flash"},
+        "models": {"embed": settings.embed_model, "describe": settings.describe_model},
     }
 
 

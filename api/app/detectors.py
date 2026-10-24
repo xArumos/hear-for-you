@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from app import gemini, store
+from app import gemini, ratelimit, store
 
 LOUD_DBFS = -20.0
 
@@ -68,7 +68,9 @@ def detect(wav: bytes, level_db: float) -> dict[str, object]:
     # Built-in classifier goes here once eval/ has trained it (needs P3's ESC-50 embeddings).
 
     if level_db > LOUD_DBFS:
-        return store.add_event("unknown", None, None, None, gemini.describe_audio(wav))
+        # Over the describe cap the sound is still "unknown", just without a description.
+        description = gemini.describe_audio(wav) if ratelimit.describe_limiter.allow() else None
+        return store.add_event("unknown", None, None, None, description)
 
     return {
         "event_id": store.new_id("evt"),

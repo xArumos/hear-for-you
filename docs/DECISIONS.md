@@ -12,10 +12,17 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 | Embedding size | 768 | Faster training and search than the 3,072 default | `EMBED_DIM` |
 | Gate threshold | room baseline + 12 dB | Starting value; tune Saturday | `web/` |
 | Detect cap | 1 call per second | Stay under free-tier limits | `MAX_DETECT_PER_SEC` |
+| Describe cap | 1 call per 10 s | At most 6 describe calls a minute (12 with retries), under 3.5 Flash-Lite's 15 RPM | `MAX_DESCRIBE_PER_SEC` |
 | Gemini timeout / retries | 10 s / 1 retry on 429 or 5xx | Fail fast during a live demo | `api/` |
 | Taught threshold mix | 0.5 (midpoint) | Threshold sits halfway between the room's best score and cos(example 1, example 2); tune with eval | `THRESHOLD_MIX` in `api/app/teach.py` |
 
 ## Log
+
+### 2026-10-24 — Describe unknown sounds with Gemini 3.5 Flash-Lite, not 3.8 Flash (P1)
+
+- **Why:** on the free tier, Gemini 3.8 Flash allows 5 requests a minute and **20 a day**. During testing every call to it timed out (504 `DEADLINE_EXCEEDED`, even a text-only "say hello" with a 30 s timeout). Gemini 3.5 Flash-Lite allows **15 a minute and 500 a day**, accepts audio, and described a test beep in 1.3 s ("This is the sound of a digital watch alarm beeping, likely from a wristwatch."). 3.1 Flash-Lite has the same limits but took 4.7 s and wrote a longer line.
+- **Describe cap:** at most 1 describe call every 10 s (`MAX_DESCRIBE_PER_SEC=0.1`). Over the cap, a loud unknown sound still returns `unknown`, with `description: null` and no API call.
+- Embedding stays `gemini-embedding-2` (100 RPM, 1,000 RPD). The describe model is still a setting (`DESCRIBE_MODEL`), so switching back is one line in `api/.env`.
 
 ### 2026-10-24 — How a taught sound is matched (P1)
 

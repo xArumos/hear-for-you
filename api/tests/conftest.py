@@ -39,9 +39,10 @@ def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
-def reset_detect_limiter() -> None:
-    """Each test starts with an empty rate-limit window so detect tests don't 429 each other."""
+def reset_limiters() -> None:
+    """Each test starts with empty rate-limit windows so tests don't throttle each other."""
     ratelimit.detect_limiter.reset()
+    ratelimit.describe_limiter.reset()
 
 
 @pytest.fixture(autouse=True)

@@ -34,7 +34,7 @@ api/
   1. Embed the clip.
   2. Score every enabled taught sound (cosine to its prototype vs. to its room vectors). A match above its threshold wins.
   3. Otherwise run the built-in classifier; a calibrated probability above 0.6 wins.
-  4. Otherwise, if `level_db` is above the "loud" cutoff (default −20 dBFS), call Gemini 3.8 Flash with the clip and the prompt in `gemini.py`, and return `kind: "unknown"`.
+  4. Otherwise, if `level_db` is above the "loud" cutoff (default −20 dBFS), call the describe model (`gemini-3.5-flash-lite`, at most 1 call per 10 s) with the clip and the prompt in `gemini.py`, and return `kind: "unknown"`.
   5. Otherwise `kind: "none"`.
 - The describe prompt: *"Describe this sound in one short, plain sentence for someone who cannot hear it. Name the likely source. No preamble."* Keep the output under 80 characters; truncate if longer.
 - Never store audio. Store embeddings and metadata only.
