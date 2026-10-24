@@ -13,8 +13,16 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 | Gate threshold | room baseline + 12 dB | Starting value; tune Saturday | `web/` |
 | Detect cap | 1 call per second | Stay under free-tier limits | `MAX_DETECT_PER_SEC` |
 | Gemini timeout / retries | 10 s / 1 retry on 429 or 5xx | Fail fast during a live demo | `api/` |
+| Taught threshold mix | 0.5 (midpoint) | Threshold sits halfway between the room's best score and cos(example 1, example 2); tune with eval | `THRESHOLD_MIX` in `api/app/teach.py` |
 
 ## Log
+
+### 2026-10-24 — How a taught sound is matched (P1)
+
+- **Prototype = normalized mean of examples 1 and 2.** Example 3 is held out for the self-check, so the check is honest.
+- **Threshold = halfway between how similar the room is to the prototype and how similar examples 1 and 2 are to each other.** It adapts to each sound and room instead of one global number. Gemini audio embeddings sit close together (a beep scored 0.87 against a knock prototype in a live test), so a fixed cutoff would not work.
+- **A match must beat the threshold and be closer to the prototype than to any room window.** `/teach`'s self-check and `/detect` use the same rule (`api/app/detectors.py`), so a passed self-check means example 3 would have been detected.
+- **The room clip may be quiet.** A quiet room is valid; only the 3 examples are rejected as silent. The 10 s room clip becomes three 3 s windows (0, 3.5 and 7 s), so a teach costs 6 embed calls, run in parallel. No server cap on `/teach`; Gemini 429s still return `rate_limited`.
 
 ### 2026-10-24 — CI on every PR; no direct pushes to main (P1)
 
