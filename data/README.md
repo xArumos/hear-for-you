@@ -4,6 +4,16 @@ Read the root `AGENTS.md` first.
 All original and converted audio, downloads, checkpoints, and smoke-test outputs stay in ignored `data/raw/`.
 Commit the completed embedding matrix and its manifest together; never commit audio or secrets.
 
+## Completed public dataset
+
+The committed ESC-50 artifacts contain 260 real Gemini embeddings aligned with `manifests/esc50.csv`.
+`embeddings/esc50_768.npy` has shape `(260, 768)`, dtype float32, finite values, and unit norms within `1e-5`.
+The original folds give 208 training rows in folds 1-4 and 52 test rows in fold 5.
+The live five-clip test passed, its rerun required zero new embedding requests, and all 260 final rows were checked against their individual checkpoints.
+`reports/esc50_validation.json` records the manifest and matrix hashes and embedding provenance.
+These checks establish artifact correctness, not classifier accuracy or a measured false-alarm rate.
+Local recordings have not yet been supplied; the recording tools below are ready for collection.
+
 ## Product purpose and class selection
 
 This dataset supports HearAlert's built-in classifier and its rejection of unrelated sounds as `other`.
