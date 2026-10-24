@@ -1,0 +1,9 @@
+{
+  "event_id": "evt_8f2d",
+  "kind": "builtin",
+  "label": "Smoke alarm",
+  "sound_id": "builtin_smoke_alarm",
+  "confidence": 0.91,
+  "description": null,
+  "latency_ms": 752
+}

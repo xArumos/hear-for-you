@@ -1,0 +1,7 @@
+{
+  "sounds": [
+    { "sound_id": "builtin_smoke_alarm", "name": "Smoke alarm", "icon": "alarm", "kind": "builtin", "enabled": true },
+    { "sound_id": "snd_3c1d", "name": "Door knock", "icon": "door", "kind": "taught", "enabled": true }
+  ],
+  "latency_ms": 3
+}

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "upstream_error",
+    "message": "The audio description service failed after retrying."
+  }
+}

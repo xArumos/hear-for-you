@@ -1,0 +1,15 @@
+{
+  "builtin_accuracy": {
+    "zero_shot": 0.71,
+    "trained": 0.89,
+    "test_fold": 5
+  },
+  "taught_miss_rate": 0.06,
+  "false_alarms_per_hour": 0.5,
+  "latency_ms_median": 1180,
+  "gemini_calls_per_hour": {
+    "gate_off": 3600,
+    "gate_on": 42
+  },
+  "updated_at": "2026-10-24T20:00:00Z"
+}

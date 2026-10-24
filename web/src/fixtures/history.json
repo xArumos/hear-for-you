@@ -1,0 +1,14 @@
+{
+  "events": [
+    {
+      "event_id": "evt_8f2a",
+      "at": "2026-10-24T14:02:11Z",
+      "kind": "taught",
+      "label": "Door knock",
+      "sound_id": "snd_3c1d",
+      "confidence": 0.94,
+      "description": null
+    }
+  ],
+  "latency_ms": 5
+}
