@@ -7,7 +7,7 @@ import pytest
 import soundfile as sf
 from fastapi.testclient import TestClient
 
-from app import gemini, ratelimit, store
+from app import detectors, gemini, ratelimit, store
 from app.errors import UpstreamError
 from app.main import app
 
@@ -36,6 +36,12 @@ def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
         raise UpstreamError("Network is disabled in tests.")
 
     monkeypatch.setattr(gemini, "_get_client", offline)
+
+
+@pytest.fixture(autouse=True)
+def no_builtin_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests start without the built-in classifier; built-in tests install a fake or load the real file."""
+    monkeypatch.setattr(detectors, "_builtin", None)
 
 
 @pytest.fixture(autouse=True)

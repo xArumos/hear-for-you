@@ -3,13 +3,37 @@
 /detect decision order (api/AGENTS.md): taught match -> built-in classifier -> loud unknown -> none.
 """
 
+import logging
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Protocol
 
+import joblib
 import numpy as np
+import sklearn
 
 from app import gemini, ratelimit, store
+from app.config import settings
+
+log = logging.getLogger("hearalert.detectors")
 
 LOUD_DBFS = -20.0
+BUILTIN_MIN_PROB = 0.6
+BUILTIN_MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "builtin_clf.joblib"
+OTHER = "other"
+
+
+class Classifier(Protocol):
+    def predict_proba(self, X: np.ndarray) -> np.ndarray: ...
+
+
+@dataclass(frozen=True)
+class BuiltinModel:
+    classifier: Classifier
+    classes: list[str]  # "other" or a builtin_ sound_id, in predict_proba column order
+
+
+_builtin: BuiltinModel | None = None
 
 
 @dataclass(frozen=True)
@@ -54,6 +78,39 @@ def match_taught(
     return best
 
 
+def load_builtin(path: Path = BUILTIN_MODEL_PATH) -> None:
+    """Load the classifier trained by eval/train_builtin.py. Without it, /detect skips the built-in step."""
+    global _builtin
+    if not path.is_file():
+        log.warning("no built-in classifier at %s; built-in sounds are off", path.name)
+        _builtin = None
+        return
+    bundle = joblib.load(path)  # our own committed file, written by eval/train_builtin.py
+    if bundle["dim"] != settings.embed_dim or bundle["embed_model"] != settings.embed_model:
+        raise RuntimeError(
+            f"{path.name} was trained on {bundle['embed_model']}/{bundle['dim']}; retrain it."
+        )
+    if bundle["sklearn_version"] != sklearn.__version__:
+        log.warning(
+            "built-in classifier saved with scikit-learn %s, running %s; retrain if results look off",
+            bundle["sklearn_version"], sklearn.__version__,
+        )
+    _builtin = BuiltinModel(bundle["model"], list(bundle["classes"]))
+    log.info("loaded built-in classifier: %s", ", ".join(_builtin.classes))
+
+
+def match_builtin(vec: np.ndarray) -> tuple[str, float] | None:
+    """The top class if it is a built-in sound above BUILTIN_MIN_PROB, else None."""
+    if _builtin is None:
+        return None
+    proba = _builtin.classifier.predict_proba(vec.reshape(1, -1))[0]
+    top = int(np.argmax(proba))
+    label, p = _builtin.classes[top], float(proba[top])
+    if label == OTHER or p <= BUILTIN_MIN_PROB:
+        return None
+    return label, p
+
+
 def detect(wav: bytes, level_db: float) -> dict[str, object]:
     """Run one validated clip through the detectors. Saves every result except "none" to history."""
     vec = gemini.embed_audio(wav)
@@ -65,7 +122,12 @@ def detect(wav: bytes, level_db: float) -> dict[str, object]:
             "taught", model.name, model.sound_id, taught_confidence(result), None
         )
 
-    # Built-in classifier goes here once eval/ has trained it (needs P3's ESC-50 embeddings).
+    builtin = match_builtin(vec)
+    if builtin is not None:
+        sound_id, p = builtin
+        sound = store.get_sound(sound_id)
+        if sound["enabled"]:
+            return store.add_event("builtin", str(sound["name"]), sound_id, round(p, 2), None)
 
     if level_db > LOUD_DBFS:
         # Over the describe cap the sound is still "unknown", just without a description.

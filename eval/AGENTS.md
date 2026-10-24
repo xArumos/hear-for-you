@@ -30,11 +30,13 @@ eval/
 
 ## Run order
 
+eval/ uses api/'s environment, so the saved model matches the scikit-learn version the API loads it with.
+
 ```bash
 cd eval
-uv run python train_builtin.py
-uv run python zero_shot.py
-uv run python few_shot.py
-uv run python false_alarms.py
-uv run python write_metrics.py
+uv run --project ../api python train_builtin.py
+uv run --project ../api python zero_shot.py
+uv run --project ../api python few_shot.py
+uv run --project ../api python false_alarms.py
+uv run --project ../api python write_metrics.py
 ```
