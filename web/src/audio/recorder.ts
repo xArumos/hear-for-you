@@ -20,6 +20,10 @@ export async function recordMicrophoneClip(durationMs = 3000): Promise<Blob> {
   });
 
   const audioContext = new AudioContext();
+  if (audioContext.state === 'suspended') {
+    await audioContext.resume();
+  }
+
   const inputSampleRate = audioContext.sampleRate;
   const source = audioContext.createMediaStreamSource(stream);
   const fragments: Float32Array[] = [];
@@ -34,7 +38,7 @@ export async function recordMicrophoneClip(durationMs = 3000): Promise<Blob> {
   source.connect(workletNode);
 
   try {
-    await sleep(durationMs);
+    await sleep(durationMs + 150);
   } finally {
     workletNode.disconnect();
     source.disconnect();
@@ -42,11 +46,23 @@ export async function recordMicrophoneClip(durationMs = 3000): Promise<Blob> {
     await audioContext.close();
   }
 
-  const samples = new Float32Array(fragments.reduce((size, chunk) => size + chunk.length, 0));
+  const totalSamples = fragments.reduce((size, chunk) => size + chunk.length, 0);
+  const targetSampleCount = Math.max(1, Math.round((durationMs / 1000) * inputSampleRate));
+  const samples = new Float32Array(Math.min(totalSamples, targetSampleCount));
+
   let offset = 0;
   for (const fragment of fragments) {
+    const nextOffset = offset + fragment.length;
+    if (nextOffset > samples.length) {
+      const available = samples.length - offset;
+      if (available > 0) {
+        samples.set(fragment.subarray(0, available), offset);
+      }
+      break;
+    }
+
     samples.set(fragment, offset);
-    offset += fragment.length;
+    offset = nextOffset;
   }
 
   if (samples.length === 0) {

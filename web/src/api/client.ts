@@ -9,8 +9,40 @@ import type {
   UpdateSoundRequest,
   UpdateSoundResponse,
 } from './types';
+import healthFixture from '../fixtures/health.json';
+import soundsFixture from '../fixtures/sounds.json';
+import detectBuiltinFixture from '../fixtures/detect_builtin.json';
+import detectTaughtFixture from '../fixtures/detect_taught.json';
+import detectUnknownFixture from '../fixtures/detect_unknown.json';
+import detectNoneFixture from '../fixtures/detect_none.json';
+import teachFixture from '../fixtures/teach.json';
+import historyFixture from '../fixtures/history.json';
+import metricsFixture from '../fixtures/metrics.json';
+import updateSoundFixture from '../fixtures/update_sound.json';
+import deleteSoundFixture from '../fixtures/delete_sound.json';
+
+const useFixtures = import.meta.env.VITE_USE_FIXTURES === '1';
+
+const fixtureMap: Record<string, unknown> = {
+  '/health': healthFixture,
+  '/sounds': soundsFixture,
+  '/detect': detectBuiltinFixture,
+  '/teach': teachFixture,
+  '/history': historyFixture,
+  '/metrics': metricsFixture,
+  '/sounds/snd_3c1d': updateSoundFixture,
+  '/sounds/snd_3c1d/delete': deleteSoundFixture,
+};
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  if (useFixtures) {
+    const fixture = fixtureMap[path];
+    if (!fixture) {
+      throw new Error(`No fixture configured for ${path}`);
+    }
+    return fixture as T;
+  }
+
   const response = await fetch(`/api${path}`, {
     ...init,
     headers: {
@@ -64,7 +96,7 @@ export async function updateSound(soundId: string, body: UpdateSoundRequest): Pr
 }
 
 export async function deleteSound(soundId: string): Promise<DeleteSoundResponse> {
-  return fetchJson<DeleteSoundResponse>(`/sounds/${soundId}`, {
+  return fetchJson<DeleteSoundResponse>(`/sounds/${soundId}/delete`, {
     method: 'DELETE',
   });
 }
