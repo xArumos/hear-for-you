@@ -19,6 +19,12 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 
 ## Log
 
+### 2026-10-24 — /api/metrics shows only measured numbers (P1)
+
+- `eval/write_metrics.py` fills a field only when the script that measures it has written its results CSV; everything else is `null`, so the Model Card page never shows a placeholder as if it were real. Today only the trained built-in accuracy is measured.
+- `builtin_accuracy.trained` is the accuracy **with the p > 0.6 rule `/detect` uses** (0.865), not plain top-class accuracy (0.962): it is the number users actually get. The Model Card lists both.
+- `api/metrics.json` is committed and re-read on every request; if it is missing, `/api/metrics` returns 404 `not_found`.
+
 ### 2026-10-24 — Smoke alarm is built in, detected by a rule (P1)
 
 - **Why not a tutorial:** asking every user to set off their own alarm (often on a high ceiling, painfully loud, sometimes wired to the whole building) to teach it was too much. The team wants smoke alarm built in.

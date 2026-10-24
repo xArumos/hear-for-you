@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, Form, Query, Request, Response, UploadFile
 from pydantic import BaseModel
 
-from app import audio, detectors, store, teach
+from app import audio, detectors, metrics, store, teach
 from app.config import settings
 from app.errors import BadRequest, install_handlers
 
@@ -115,3 +115,9 @@ def delete_sound(sound_id: str) -> dict[str, object]:
 def history(since: str | None = None, limit: int = Query(100, ge=1)) -> dict[str, object]:
     start = time.perf_counter()
     return {"events": store.list_events(since=since, limit=limit), "latency_ms": _ms(start)}
+
+
+@app.get("/api/metrics")
+def get_metrics() -> dict[str, object]:
+    start = time.perf_counter()
+    return {**metrics.read_metrics(), "latency_ms": _ms(start)}
