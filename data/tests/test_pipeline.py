@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import Counter
 from contextlib import redirect_stdout
+import csv
 import io
 from pathlib import Path
 import subprocess
@@ -80,6 +81,57 @@ class AudioTests(unittest.TestCase):
 
 
 class SelectionTests(unittest.TestCase):
+    def test_fresh_download_cli_and_cached_rerun(self) -> None:
+        rows = metadata()
+        csv_output = io.StringIO(newline="")
+        writer = csv.DictWriter(csv_output, fieldnames=["filename", "category", "fold"])
+        writer.writeheader()
+        writer.writerows(rows)
+        audio_output = io.BytesIO()
+        with wave.open(audio_output, "wb") as audio:
+            audio.setparams((1, 2, 44100, 220500, "NONE", "not compressed"))
+            audio.writeframes(np.full(220500, 100, dtype="<i2").tobytes())
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            fixture = workspace / "official-fixture.zip"
+            prefix = f"ESC-50-{dataset.REVISION}/"
+            with zipfile.ZipFile(fixture, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                archive.writestr(prefix + "meta/esc50.csv", csv_output.getvalue())
+                for row in dataset.select_rows(rows):
+                    archive.writestr(prefix + "audio/" + row["filename"], audio_output.getvalue())
+            # Exercise both CLI runs in a fresh workspace, replacing only the download transport.
+            script = """
+from pathlib import Path
+import sys
+from unittest.mock import patch
+sys.path.insert(0, sys.argv[1])
+import download_esc50 as dataset
+dataset.ROOT = Path(sys.argv[2])
+dataset.DATA = dataset.ROOT / 'data'
+fixture = Path(sys.argv[3])
+sys.argv = ['download_esc50.py', '--smoke-test']
+with patch.object(dataset.urllib.request, 'urlopen', side_effect=lambda *a, **k: fixture.open('rb')) as fetch:
+    dataset.main()
+    dataset.main()
+    assert fetch.call_count == 1, 'Cached rerun downloaded the archive again'
+"""
+            result = subprocess.run(
+                [sys.executable, "-c", script, str(dataset.DATA), str(workspace), str(fixture)],
+                capture_output=True, text=True, timeout=30,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            raw = workspace / "data/raw"
+            archive_path = raw / f"esc50-{dataset.REVISION}.zip"
+            self.assertEqual(archive_path.read_bytes(), fixture.read_bytes())
+            self.assertFalse(archive_path.with_suffix(".zip.part").exists())
+            self.assertEqual(len(list((raw / "esc50/audio").glob("*.wav"))), 260)
+            converted = list((raw / "converted").glob("*.wav"))
+            self.assertEqual(len(converted), 5)
+            for path in converted:
+                convert.validate_wav(path)
+            from dataset_io import read_csv
+            self.assertEqual(len(read_csv(workspace / "data/manifests/esc50.csv")), 260)
+
     def test_deterministic_balanced_and_preserves_folds(self) -> None:
         rows = metadata()
         chosen = dataset.select_rows(rows)

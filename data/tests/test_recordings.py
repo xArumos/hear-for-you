@@ -211,6 +211,53 @@ class RecordingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "stale"):
             preparation.read_prepared(manifest)
 
+    def test_failed_reruns_preserve_completed_artifacts(self) -> None:
+        sources = self.sources()
+        extra = self.raw / "take3.wav"
+        write_wav(extra, np.full(SAMPLES, 700))
+        sources.append(sources[0] | {"clip_id": "take3", "path": str(extra)})
+        atomic_bytes(self.input, manifest_bytes(sources))
+        rows = self.prepare()
+        self.assertEqual(len(rows), 6)
+        manifest = self.root / "manifests/recordings.csv"
+        args = ["--manifest", str(manifest)]
+        for mode in ["--smoke-test", "--smoke-test", "--full"]:
+            result = self.command("embed_recordings.py", *args, mode, mocked=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        paths = [manifest, self.root / "embeddings/recordings_768.npy",
+                 self.root / "reports/recordings_validation.json",
+                 manifest.with_name("recordings_metadata.json"),
+                 self.root / "reports/recordings_quality.json"]
+        original = {path: sha256_file(path) for path in paths}
+        receipt = self.raw / "cache/recordings-smoke-passed.json"
+        saved_receipt = receipt.read_bytes()
+        receipt.unlink()
+        failed = self.command("embed_recordings.py", *args, "--full", mocked=True)
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertIn("twice", failed.stderr)
+        self.assertEqual(original, {path: sha256_file(path) for path in paths})
+        attempt_path = self.raw / "status/recordings_full_attempt.json"
+        attempt = json.loads(attempt_path.read_text())
+        self.assertEqual(attempt["status"], "incomplete")
+        self.assertIn("twice", attempt["reason"])
+        atomic_bytes(receipt, saved_receipt)
+        # Remove only a non-smoke checkpoint so the provider failure occurs after the gate passes.
+        smoke_keys = set(json.loads(saved_receipt)["keys"])
+        full_keys = core.checked_inputs(rows)
+        remaining = next(key for key in full_keys if key not in smoke_keys)
+        (self.raw / "cache" / f"{remaining}.npy").unlink()
+        failed = self.command("embed_recordings.py", *args, "--full", mocked=True, fail_after=0)
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertIn("checkpoint preserved", failed.stderr)
+        self.assertEqual(original, {path: sha256_file(path) for path in paths})
+        self.assertEqual(json.loads(attempt_path.read_text())["status"], "incomplete")
+        validation = self.command("validate_dataset.py", "--dataset", "recordings", "--output-dir", str(self.root))
+        self.assertEqual(validation.returncode, 0, validation.stdout + validation.stderr)
+        resumed = self.command("embed_recordings.py", *args, "--full", mocked=True)
+        self.assertEqual(resumed.returncode, 0, resumed.stdout + resumed.stderr)
+        self.assertIn("newly_embedded=1", resumed.stdout)
+        self.assertEqual(json.loads(attempt_path.read_text())["status"], "complete")
+
     def test_pacing_survives_restart(self) -> None:
         path = self.raw / "last-request.json"
         write_json(path, {"started_at": 100.0})

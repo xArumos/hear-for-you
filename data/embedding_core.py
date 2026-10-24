@@ -257,6 +257,8 @@ def run_dataset(rows: list[dict[str, str]], manifest: Path, output_dir: Path,
     cache.mkdir(parents=True, exist_ok=True)
     report_path = output_dir / (f"raw/smoke/{dataset}/validation.json" if smoke
                                 else f"reports/{dataset}_validation.json")
+    mode = "smoke" if smoke else "full"
+    attempt_path = output_dir / f"raw/status/{dataset}_{mode}_attempt.json"
     with (cache / "run.lock").open("w") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -291,9 +293,11 @@ def run_dataset(rows: list[dict[str, str]], manifest: Path, output_dir: Path,
                            "companions": companion_hashes, "cache_only": new_count == 0})
             report = artifact_report(selected, manifest, matrix, matrix_path, keys, new_count, companions)
             write_json(report_path, report)
+            write_json(attempt_path, {"status": "complete", "model": MODEL,
+                       "manifest_sha256": manifest_hash, "rows": len(selected)})
             print(f"Complete: shape={matrix.shape}, dtype={matrix.dtype}, newly_embedded={new_count}.")
         except (OSError, ValueError, RuntimeError) as exc:
-            write_json(report_path, {"status": "incomplete", "model": MODEL,
+            write_json(attempt_path, {"status": "incomplete", "model": MODEL,
                        "manifest_sha256": manifest_hash, "rows": len(selected),
                        "reason": str(exc)})
             raise

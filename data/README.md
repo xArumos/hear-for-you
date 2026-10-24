@@ -206,6 +206,8 @@ At least five prepared clips are required; a successful smoke test and cache-onl
 Fingerprints invalidate affected checkpoints when audio or preprocessing changes.
 Changing source audio creates a new preparation generation without overwriting files belonging to the previous generation.
 Failed or interrupted embedding runs retain successful checkpoints and never publish partial matrices.
+Failed attempts preserve the previous completed manifest, matrix, and validation report.
+Smoke and full attempt results are recorded separately under ignored `raw/status/<dataset>_<mode>_attempt.json`; a successful rerun clears the previous failure status there.
 
 ## Verification and P1 handoff
 
