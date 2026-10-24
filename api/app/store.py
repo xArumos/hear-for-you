@@ -68,6 +68,17 @@ class TaughtModel:
     threshold: float
 
 
+def parse_time(value: str) -> str:
+    """Any ISO 8601 time -> the stored UTC format. Naive times are taken as UTC."""
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        raise BadRequest(f"Invalid ISO 8601 time: {value}.") from None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def new_id(prefix: str) -> str:
     """Short random id, e.g. snd_1a2b3c4d. 8 hex chars so history ids don't collide in practice."""
     return f"{prefix}_{secrets.token_hex(4)}"
@@ -282,6 +293,8 @@ def list_events(
     since: str | None = None, limit: int = 100, db_path: str | None = None
 ) -> list[dict[str, object]]:
     """Newest first. `since` keeps events at or after that time (callers dedupe by event_id)."""
+    if since is not None:
+        since = parse_time(since)
     with _connect(db_path) as conn:
         if since is None:
             rows = conn.execute(

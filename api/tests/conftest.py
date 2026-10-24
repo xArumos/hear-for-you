@@ -1,11 +1,13 @@
+import dataclasses
 import io
+from pathlib import Path
 
 import numpy as np
 import pytest
 import soundfile as sf
 from fastapi.testclient import TestClient
 
-from app import gemini, ratelimit
+from app import gemini, ratelimit, store
 from app.main import app
 
 
@@ -29,6 +31,15 @@ def make_wav(
 def reset_detect_limiter() -> None:
     """Each test starts with an empty rate-limit window so detect tests don't 429 each other."""
     ratelimit.detect_limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+def temp_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
+    """Point the app's default database at a fresh seeded file so route tests never touch ./hearalert.db."""
+    path = str(tmp_path / "app.db")
+    monkeypatch.setattr(store, "settings", dataclasses.replace(store.settings, db_path=path))
+    store.init_db()
+    return path
 
 
 @pytest.fixture
