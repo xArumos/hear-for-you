@@ -40,7 +40,7 @@ Rules:
 - Backend: Python 3.12, FastAPI, Uvicorn, `google-genai` SDK, NumPy, scikit-learn, `soundfile`. Env managed by `uv`.
 - Frontend: Node 22 LTS, npm, Vite, React 18, TypeScript (strict), Tailwind CSS. No other UI framework.
 - Storage: SQLite via Python's `sqlite3` module. No ORM.
-- Models: `gemini-embedding-2` (audio → vector) and `gemini-3.8-flash` (describe unknown sounds). No other models.
+- Models: `gemini-embedding-2` (audio → vector) and `gemini-3.5-flash-lite` (describe unknown sounds; see `docs/DECISIONS.md`). No other models.
 - Audio format everywhere: **16 kHz, mono, 16-bit PCM WAV, 3.0 s clips**. Embedding 2 accepts only mp3 or wav.
 
 Do not add dependencies without your human's approval. Every new dependency goes into `docs/DECISIONS.md`.
