@@ -1,4 +1,4 @@
-# HearAlert UI design (Figma Make export)
+# Hear For You UI design (Figma Make export)
 
 Design by **P4** (GitHub `zenlynwu-droid`), made in Figma Make and exported to
 [zenlynwu-droid/BuildHearAlertAccessibilityApp](https://github.com/zenlynwu-droid/BuildHearAlertAccessibilityApp)
@@ -65,9 +65,9 @@ Read `AGENTS.md`, `web/AGENTS.md` and `CONTRACT.md` first. Where this design dis
    reconnect", "Preview … alert") or hide them behind a dev flag.
 9. **Screens the design doesn't cover:** the Model Card page (`GET /api/metrics`) and error / offline / permission
    states beyond the ones shown. Follow the same visual style.
-10. **App name: still "HearAlert".** The design renames the app to "Hear For You" (motto "Here when it matters.
-    Hearing what matters."). The name is a team decision that hasn't been made; until `AGENTS.md` and `CONTEXT.md`
-    change, keep "HearAlert" in the UI. The layouts themselves don't depend on the name.
+10. **App name: "Hear For You".** The team renamed the app (Oct 24). Use "Hear For You" and the motto "Here when it
+    matters. Hearing what matters." in the UI, as the design does. Code names stay as they are (repo `hearalert`,
+    `/api/...` paths, IDs); the rest of the docs may still say "HearAlert" until they're updated.
 11. **No accounts.** The design's sign-in, create account, verify email, reset password, session-expired screens and
     the Account page are not supported: the API has no users or auth endpoints, and adding them is out of scope. Don't
     build them and don't gate anything behind sign-in. Show My Sounds and History to everyone. Drop the "Requires
