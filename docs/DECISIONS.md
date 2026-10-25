@@ -19,6 +19,33 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 
 ## Log
 
+### 2026-10-24 — Conservative frontend alert relevance and grouping (P2)
+
+The existing capture baseline + 12 dB, microphone constraints, model and backend
+thresholds stay unchanged. A shared frontend admission decision feeds both the
+visual alert and local History. Empty unknown descriptions, generic loud-noise
+fallbacks, and a narrow set of complete background-only descriptions are not
+admitted. Mixed-event descriptions are not rejected by individual speech/typing
+keywords. This is a text presentation filter, not validated audio classification;
+paraphrases can escape it, and descriptions can omit a real simultaneous event.
+Meaningful unknown descriptions remain eligible without invented confidence.
+
+Recognized results must refer to an enabled sound and have finite scores in
+[0, 1]. The frontend mirrors the backend's existing > 0.6 built-in rule and >= 0.5
+taught score mapping; the smoke-alarm rule is exempt from the classifier cutoff.
+Taught confidence is a threshold-relative mapping, not a calibrated probability.
+No higher global or unvalidated class-specific confidence threshold is introduced.
+
+Barks, sirens and crying alert immediately on the first admitted result. Continued
+observations less than 10 seconds apart group into the same local event. The
+interval is a notification policy, not an empirically validated classifier
+constant. A gap in observations rearms the category; missed observations can
+split an ongoing event, and distinct events less than 10 seconds apart can group.
+Glass breaks, smoke alarms, knocks and taught sounds require no repetition and
+have no category cooldown. Duplicate admitted API event IDs are ignored for the
+lifetime of the app. Backend History is written before this frontend policy and
+requires P1 changes to adopt the same rules. No contract change is proposed here.
+
 ### 2026-10-24 — Renamed the app to Hear For You (team)
 
 The app is now **Hear For You**, with the motto "Here when it matters. Hearing what matters.", from P4's Figma design. All
