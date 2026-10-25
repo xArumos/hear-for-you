@@ -9,12 +9,12 @@ import { getSounds, teachSound, updateSound, deleteSound } from './api/client'
 import { useListening, type GlobalListening } from './hooks/useListening'
 import { AlertPolicy } from './alert-policy'
 import { filterHistoryEvents, historyRangeError } from './history-filter'
-import type { DetectResponse } from './api/types'
+import { historyIcon } from './history-icon'
+import type { DetectResponse, IconKey } from './api/types'
 
 type Screen = 'home' | 'listen' | 'teach' | 'record' | 'history' | 'sounds' | 'account' | 'auth' | 'recognized' | 'unknown' | 'attention'
 type AuthMode = 'signin' | 'create' | 'verify' | 'forgot' | 'reset' | 'expired'
-type IconName = 'door' | 'bell' | 'alarm' | 'baby' | 'dog' | 'kettle' | 'microwave' | 'phone' | 'voice' | 'glass' | 'siren' | 'water' | 'generic'
-
+type IconName = IconKey
 type GuestHistoryEvent = {
   event_id: string;
   at: string;
@@ -31,7 +31,7 @@ const STORAGE_KEYS = {
   history: 'hear-for-you-history',
 } as const
 
-const iconPaths: Record<IconName | 'home' | 'account' | 'history' | 'moon' | 'pause' | 'check' | 'warning', React.ReactNode> = {
+const iconPaths: Record<IconKey | 'home' | 'account' | 'history' | 'moon' | 'pause' | 'check' | 'warning', React.ReactNode> = {
   door: <><path d="M5 21V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v17"/><path d="M3 21h18M14 12h.01"/></>,
   bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></>,
   alarm: <><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M5 3 2 6M19 3l3 3"/></>,
@@ -104,10 +104,10 @@ function PlaybackControl({ label, clip }: { label:string; clip:Blob }) {
   </div>
 }
 
-const categories: { name: string; icon: IconName }[] = [
+const categories: { name: string; icon: IconKey }[] = [
   ['Door', 'door'], ['Bell', 'bell'], ['Alarm', 'alarm'], ['Baby', 'baby'], ['Dog', 'dog'], ['Kettle', 'kettle'], ['Microwave', 'microwave'],
   ['Phone', 'phone'], ['Voice', 'voice'], ['Glass', 'glass'], ['Siren', 'siren'], ['Water', 'water'], ['Other', 'generic'],
-].map(([name, icon]) => ({ name, icon: icon as IconName }))
+].map(([name, icon]) => ({ name, icon: icon as IconKey }))
 
 function Brand() {
   return <div className="brand"><span className="brand-mark"><i/><i/><i/><i/></span><strong>hear for you.</strong></div>
@@ -151,14 +151,14 @@ function Listen({ setScreen, builtins, customSounds, listening }: { setScreen: (
     </section>
     <div className="dashboard-grid">
       <section className="card sounds-card"><div className="section-head"><div><h2>Your sounds</h2><p>Enabled sound categories and saved sounds appear here.</p></div></div>
-        {visibleSounds.length === 0 ? <div className="sounds-empty"><span className="empty-plus">+</span><h2>No active sounds yet</h2><p>Turn on a built-in sound or save a custom one to start listening.</p><button className="primary" onClick={()=>setScreen('teach')}><span aria-hidden="true">+</span> Teach a sound</button></div> : <div className="sound-list">{visibleSounds.map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon as IconName}/></span><span><strong>{sound.name}</strong><small>{!sound.enabled ? 'Disabled / unavailable' : sound.kind === 'builtin' ? 'Built-in category' : 'Saved sound'}</small></span><button className="text-button" onClick={()=>setScreen('sounds')}>View</button></div>)}</div>}
+        {visibleSounds.length === 0 ? <div className="sounds-empty"><span className="empty-plus">+</span><h2>No active sounds yet</h2><p>Turn on a built-in sound or save a custom one to start listening.</p><button className="primary" onClick={()=>setScreen('teach')}><span aria-hidden="true">+</span> Teach a sound</button></div> : <div className="sound-list">{visibleSounds.map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon}/></span><span><strong>{sound.name}</strong><small>{!sound.enabled ? 'Disabled / unavailable' : sound.kind === 'builtin' ? 'Built-in category' : 'Saved sound'}</small></span><button className="text-button" onClick={()=>setScreen('sounds')}>View</button></div>)}</div>}
       </section>
       <aside className="info-card card"><span className="info-icon">i</span><h2>Private by design</h2><p>Only loud sounds are analyzed. Audio is never stored permanently in your browser session.</p><hr/><p><strong>Keep this tab visible.</strong><br/>Browsers may limit microphone access when your screen is locked or the tab is hidden.</p></aside>
     </div>
   </div>
 }
 
-function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecording, clips, message, saving, name, setName, selected, setSelected }: { setScreen:(s:Screen)=>void; done:boolean[]; clips:(Blob|null)[]; message:string|null; saving:boolean; name:string; setName:(name:string)=>void; selected:IconName; setSelected:(icon:IconName)=>void; saved:boolean; startRecording:(index:number)=>void; saveSound:(payload:{name:string; icon:IconName})=>void; deleteRecording:(index:number)=>void }) {
+function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecording, clips, message, saving, name, setName, selected, setSelected }: { setScreen:(s:Screen)=>void; done:boolean[]; clips:(Blob|null)[]; message:string|null; saving:boolean; name:string; setName:(name:string)=>void; selected:IconKey; setSelected:(icon:IconKey)=>void; saved:boolean; startRecording:(index:number)=>void; saveSound:(payload:{name:string; icon:IconKey})=>void; deleteRecording:(index:number)=>void }) {
   const handleSave = () => saveSound({ name, icon: selected })
 
   return <div className="page"><div className="title-row"><div><p className="eyebrow">PERSONAL SOUND LIBRARY</p><h1>Teach a sound</h1><p>Teach Hear For You the sounds that matter to you.</p></div><span className="step-label">{done.filter(Boolean).length} of 4 recordings</span></div>
@@ -211,17 +211,17 @@ function MySounds({ builtinSounds, customSounds, toggleBuiltin, deleteCustom, sa
     <div className="library-grid">
       <section className="card account-card">
         <h2>Built-In Sounds</h2>
-        {builtinSounds.map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon as IconName}/></span><span><strong>{sound.name}</strong><small>{sound.enabled ? 'Enabled' : 'Disabled'}</small></span><button className={`switch ${sound.enabled ? 'on' : ''}`} aria-label={`${sound.enabled ? 'Disable' : 'Enable'} ${sound.name}`} onClick={() => toggleBuiltin(sound.sound_id)}><span/></button></div>)}
+        {builtinSounds.map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon}/></span><span><strong>{sound.name}</strong><small>{sound.enabled ? 'Enabled' : 'Disabled'}</small></span><button className={`switch ${sound.enabled ? 'on' : ''}`} aria-label={`${sound.enabled ? 'Disable' : 'Enable'} ${sound.name}`} onClick={() => toggleBuiltin(sound.sound_id)}><span/></button></div>)}
       </section>
       <section className="card account-card">
         <h2>My Taught Sounds</h2>
-        {customSounds.length === 0 ? <div className="sounds-empty"><span className="empty-plus">+</span><h2>No custom sounds yet</h2><p>Teach a sound to add it to your library.</p><button className="primary" onClick={saveCustom}>Teach a sound</button></div> : customSounds.map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon as IconName}/></span><span><strong>{sound.name}</strong><small>{sound.enabled ? 'Active' : 'Disabled'}</small></span><button className="danger-button" onClick={() => deleteCustom(sound.sound_id)}>Delete</button></div>)}
+        {customSounds.length === 0 ? <div className="sounds-empty"><span className="empty-plus">+</span><h2>No custom sounds yet</h2><p>Teach a sound to add it to your library.</p><button className="primary" onClick={saveCustom}>Teach a sound</button></div> : customSounds.map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon}/></span><span><strong>{sound.name}</strong><small>{sound.enabled ? 'Active' : 'Disabled'}</small></span><button className="danger-button" onClick={() => deleteCustom(sound.sound_id)}>Delete</button></div>)}
       </section>
     </div>
   </div>
 }
 
-function History({ events }: { events: GuestHistoryEvent[] }) {
+function History({ events, sounds }: { events: GuestHistoryEvent[]; sounds: readonly GuestSound[] }) {
   const [soundFilter,setSoundFilter]=useState('All')
   const [startDate,setStartDate]=useState('')
   const [endDate,setEndDate]=useState('')
@@ -234,7 +234,7 @@ function History({ events }: { events: GuestHistoryEvent[] }) {
     return <div className="page"><div className="title-row"><div><p className="eyebrow">DETECTION HISTORY</p><h1>History</h1><p>Your genuine detections appear here after a matching event is confirmed.</p></div></div><section className="card history-empty"><h2>No detections yet</h2><p>New detections will appear here after a sound is recognized and enabled.</p></section></div>
   }
 
-  return <div className="page"><div className="title-row"><div><p className="eyebrow">DETECTION HISTORY</p><h1>History</h1><p>Only confirmed detections appear in History.</p></div></div><section className="card history-filters"><label>Start date<input type="date" value={startDate} max={endDate || undefined} onChange={e=>setStartDate(e.target.value)} aria-invalid={!!rangeError}/></label><label>End date<input type="date" value={endDate} min={startDate || undefined} onChange={e=>setEndDate(e.target.value)} aria-invalid={!!rangeError}/></label><label>Sound<select value={soundFilter} onChange={e=>setSoundFilter(e.target.value)}><option value="All">All</option>{Array.from(new Set(events.map((event) => event.label).filter(Boolean))).map((label) => <option key={label as string} value={label as string}>{label as string}</option>)}</select></label><button className="secondary" onClick={()=>{setStartDate('');setEndDate('');setSoundFilter('All')}}>Clear filters</button>{rangeError && <p className="history-filter-error" role="alert">{rangeError}</p>}</section><section className="card history-card"><div className="history-head event-only"><span>Date and time</span><span>Original detected label</span><span>Status</span></div>{filtered.slice(0, limit).map((event) => <div className="history-row event-only" key={event.event_id}><time>{new Date(event.at).toLocaleString()}</time><span className="event-name"><span className={`event-icon ${event.kind}`}><Icon name={event.kind === 'unknown' ? 'warning' : event.kind === 'builtin' ? (event.label?.includes('dog') ? 'dog' : 'generic') : 'voice'}/></span><span><strong>{event.label ?? 'Sound detected'}</strong></span></span><span><b className={`type ${event.kind}`}>{event.kind}</b></span></div>)}{filtered.length === 0 && <div className="history-empty"><h2>No matching results</h2><p>Try clearing one or more filters.</p></div>}</section>{limit < filtered.length && <button className="secondary load-more" onClick={()=>setLimit(limit + 5)}>Load more history</button>}</div>
+  return <div className="page"><div className="title-row"><div><p className="eyebrow">DETECTION HISTORY</p><h1>History</h1><p>Only confirmed detections appear in History.</p></div></div><section className="card history-filters"><label>Start date<input type="date" value={startDate} max={endDate || undefined} onChange={e=>setStartDate(e.target.value)} aria-invalid={!!rangeError}/></label><label>End date<input type="date" value={endDate} min={startDate || undefined} onChange={e=>setEndDate(e.target.value)} aria-invalid={!!rangeError}/></label><label>Sound<select value={soundFilter} onChange={e=>setSoundFilter(e.target.value)}><option value="All">All</option>{Array.from(new Set(events.map((event) => event.label).filter(Boolean))).map((label) => <option key={label as string} value={label as string}>{label as string}</option>)}</select></label><button className="secondary" onClick={()=>{setStartDate('');setEndDate('');setSoundFilter('All')}}>Clear filters</button>{rangeError && <p className="history-filter-error" role="alert">{rangeError}</p>}</section><section className="card history-card"><div className="history-head event-only"><span>Date and time</span><span>Original detected label</span><span>Status</span></div>{filtered.slice(0, limit).map((event) => <div className="history-row event-only" key={event.event_id}><time>{new Date(event.at).toLocaleString()}</time><span className="event-name"><span className={`event-icon ${event.kind}`}><Icon name={historyIcon(event, sounds)}/></span><span><strong>{event.label ?? 'Sound detected'}</strong></span></span><span><b className={`type ${event.kind}`}>{event.kind}</b></span></div>)}{filtered.length === 0 && <div className="history-empty"><h2>No matching results</h2><p>Try clearing one or more filters.</p></div>}</section>{limit < filtered.length && <button className="secondary load-more" onClick={()=>setLimit(limit + 5)}>Load more history</button>}</div>
 }
 
 export default function App() {
@@ -244,7 +244,7 @@ export default function App() {
   const [clips, setClips] = useState<(Blob|null)[]>([null, null, null, null])
   const recordings = clips.map(Boolean)
   const [name, setName] = useState('Door knock')
-  const [selected, setSelected] = useState<IconName>('door')
+  const [selected, setSelected] = useState<IconKey>('door')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string|null>(null)
   const backendIds = useRef(new Set<string>())
@@ -284,7 +284,7 @@ export default function App() {
     return () => { cancelled = true }
   }, [])
 
-  const saveCustomSound = async ({ name, icon }: { name: string; icon: IconName }) => {
+  const saveCustomSound = async ({ name, icon }: { name: string; icon: IconKey }) => {
     if (saveLock.current || !name.trim() || name.trim().length > 40 || clips.some(clip => !clip)) return
     saveLock.current = true; setSaving(true); setMessage(null)
     try {
@@ -338,5 +338,5 @@ export default function App() {
     setScreen(next)
   }
 
-  return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}>{detection && <section className={`alert-screen ${detection.kind === 'unknown' ? 'unknown' : 'recognized'}`} style={{position:'fixed',inset:0,zIndex:40}} role="alert"><div className="alert-top"><Brand/><span>Alert remains visible until dismissed</span></div><div className="alert-content"><div className="alert-icon"><Icon name={detection.kind === 'unknown' ? 'generic' : (builtinSounds.find(sound => sound.sound_id === detection.sound_id)?.icon as IconName ?? 'bell')} size={76}/></div><p className="alert-kicker">{detection.kind === 'unknown' ? 'UNKNOWN SOUND' : 'RECOGNIZED SOUND'}</p><h1>{detection.label ?? 'What was that?'}</h1><p className="alert-sub">{detection.description ?? (detection.confidence !== null ? `${Math.round(detection.confidence * 100)}% confidence` : 'A loud sound was detected.')}</p><p className="alert-note">Detected just now</p><div className="alert-actions"><button autoFocus className="alert-dismiss" onClick={() => setDetection(null)}>Dismiss alert</button></div></div></section>}{screen === 'home' ? <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} /> : screen === 'listen' ? <Listen setScreen={setScreen} builtins={builtinSounds} customSounds={customSounds} listening={listening}  /> : screen === 'teach' ? <Teach setScreen={setScreen} done={recordings} clips={clips} message={message} saving={saving} name={name} setName={setName} selected={selected} setSelected={setSelected} saved={soundSaved} startRecording={startRecording} saveSound={saveCustomSound} deleteRecording={(index) => { setClips((current) => current.map((value, currentIndex) => currentIndex === index ? null : value)); setSoundSaved(false) }} /> : screen === 'record' ? <Recording key={recordingIndex} setScreen={setScreen} index={recordingIndex} saveRecording={saveRecording} record={listening.record} /> : screen === 'sounds' ? <MySounds builtinSounds={builtinSounds} customSounds={customSounds} toggleBuiltin={toggleBuiltin} deleteCustom={deleteCustom} saveCustom={() => setScreen('teach')} /> : screen === 'history' ? <History events={history} /> : screen === 'auth' ? <AuthScreen /> : <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} />}</Shell></div>
+  return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}>{detection && <section className={`alert-screen ${detection.kind === 'unknown' ? 'unknown' : 'recognized'}`} style={{position:'fixed',inset:0,zIndex:40}} role="alert"><div className="alert-top"><Brand/><span>Alert remains visible until dismissed</span></div><div className="alert-content"><div className="alert-icon"><Icon name={detection.kind === 'unknown' ? 'generic' : (builtinSounds.find(sound => sound.sound_id === detection.sound_id)?.icon as IconName ?? 'bell')} size={76}/></div><p className="alert-kicker">{detection.kind === 'unknown' ? 'UNKNOWN SOUND' : 'RECOGNIZED SOUND'}</p><h1>{detection.label ?? 'What was that?'}</h1><p className="alert-sub">{detection.description ?? (detection.confidence !== null ? `${Math.round(detection.confidence * 100)}% confidence` : 'A loud sound was detected.')}</p><p className="alert-note">Detected just now</p><div className="alert-actions"><button autoFocus className="alert-dismiss" onClick={() => setDetection(null)}>Dismiss alert</button></div></div></section>}{screen === 'home' ? <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} /> : screen === 'listen' ? <Listen setScreen={setScreen} builtins={builtinSounds} customSounds={customSounds} listening={listening}  /> : screen === 'teach' ? <Teach setScreen={setScreen} done={recordings} clips={clips} message={message} saving={saving} name={name} setName={setName} selected={selected} setSelected={setSelected} saved={soundSaved} startRecording={startRecording} saveSound={saveCustomSound} deleteRecording={(index) => { setClips((current) => current.map((value, currentIndex) => currentIndex === index ? null : value)); setSoundSaved(false) }} /> : screen === 'record' ? <Recording key={recordingIndex} setScreen={setScreen} index={recordingIndex} saveRecording={saveRecording} record={listening.record} /> : screen === 'sounds' ? <MySounds builtinSounds={builtinSounds} customSounds={customSounds} toggleBuiltin={toggleBuiltin} deleteCustom={deleteCustom} saveCustom={() => setScreen('teach')} /> : screen === 'history' ? <History events={history} sounds={[...builtinSounds, ...customSounds]} /> : screen === 'auth' ? <AuthScreen /> : <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} />}</Shell></div>
 }

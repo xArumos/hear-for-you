@@ -1,3 +1,5 @@
+import type { IconKey } from './api/types.ts';
+
 export interface RecordingStep {
   blob: Blob | null;
   valid: boolean;
@@ -8,7 +10,7 @@ export type GuestSoundKind = 'builtin' | 'taught';
 export interface GuestSound {
   sound_id: string;
   name: string;
-  icon: string;
+  icon: IconKey;
   kind: GuestSoundKind;
   enabled: boolean;
 }
