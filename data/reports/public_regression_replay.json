@@ -1,0 +1,568 @@
+{
+  "version": 1,
+  "status": "complete",
+  "evidence": "digital_microphone_replay_of_public_recordings",
+  "tested_app_commit": "37c965e",
+  "source_manifest_sha256": "2dc12a062f996a59f8a079096921a3c9025973da35d3725c1c3c956fc915a3c2",
+  "models": {
+    "embed": "gemini-embedding-2",
+    "describe": "gemini-3.5-flash-lite"
+  },
+  "isolation": {
+    "frontend_port": 15173,
+    "backend_port": 18000,
+    "database": "fresh temporary test database",
+    "api_responses_mocked": false
+  },
+  "trial_count": 8,
+  "request_failures": 0,
+  "reliability_established": false,
+  "limitations": [
+    "Replay preserves original timing, with no inserted synthetic baseline.",
+    "Provider labels and RMS activity bounds are exploratory; event matching needs manual review.",
+    "This report is diagnostic evidence, not measured physical-distance accuracy or false-alerts per hour."
+  ],
+  "trials": [
+    {
+      "trial_id": "bigsoundbank_0015",
+      "expected_label": "builtin_door_knock",
+      "duration_seconds": 4.179625,
+      "capture_kind": "public_recording",
+      "source_group": "bigsoundbank_0015",
+      "held_out_eligible": true,
+      "calls": [
+        {
+          "started_ms": 3392.5,
+          "status": 200,
+          "body": {
+            "event_id": "evt_d12246d3",
+            "kind": "builtin",
+            "label": "Door knock",
+            "sound_id": "builtin_door_knock",
+            "confidence": 0.77,
+            "description": null,
+            "latency_ms": 800
+          },
+          "ended_ms": 4202.300000011921
+        },
+        {
+          "started_ms": 5883.70000000298,
+          "status": 200,
+          "body": {
+            "event_id": "evt_79d09e10",
+            "kind": "builtin",
+            "label": "Door knock",
+            "sound_id": "builtin_door_knock",
+            "confidence": 0.87,
+            "description": null,
+            "latency_ms": 593
+          },
+          "ended_ms": 6482.9000000059605
+        }
+      ],
+      "alerts": [
+        {
+          "at_ms": 4218.70000000298,
+          "text": "hear for you.\nAlert remains visible until dismissed\n\nRECOGNIZED SOUND\n\nDoor knock\n\n77% confidence\n\nDetected just now\n\nDismiss alert"
+        },
+        {
+          "at_ms": 6488,
+          "text": "hear for you.\nAlert remains visible until dismissed\n\nRECOGNIZED SOUND\n\nDoor knock\n\n87% confidence\n\nDetected just now\n\nDismiss alert"
+        }
+      ],
+      "local_history_count": 2,
+      "no_gate_request": false,
+      "request_failures": 0,
+      "positive_without_alert": false,
+      "negative_with_alert": false,
+      "needs_manual_event_matching": true
+    },
+    {
+      "trial_id": "bigsoundbank_0078",
+      "expected_label": "fan_ac",
+      "duration_seconds": 9.4040625,
+      "capture_kind": "public_recording",
+      "source_group": "bigsoundbank_electric_fan_series",
+      "held_out_eligible": true,
+      "calls": [],
+      "alerts": [],
+      "local_history_count": 0,
+      "no_gate_request": true,
+      "request_failures": 0,
+      "positive_without_alert": false,
+      "negative_with_alert": false,
+      "needs_manual_event_matching": false
+    },
+    {
+      "trial_id": "bigsoundbank_0112",
+      "expected_label": "builtin_dog_bark",
+      "duration_seconds": 9.351875,
+      "capture_kind": "public_recording",
+      "source_group": "bigsoundbank_0112",
+      "held_out_eligible": true,
+      "calls": [
+        {
+          "started_ms": 3283.0999999940395,
+          "status": 200,
+          "body": {
+            "event_id": "evt_238f4b9c",
+            "kind": "builtin",
+            "label": "Dog bark",
+            "sound_id": "builtin_dog_bark",
+            "confidence": 0.77,
+            "description": null,
+            "latency_ms": 1170
+          },
+          "ended_ms": 4463.5
+        },
+        {
+          "started_ms": 6278.29999999702,
+          "status": 200,
+          "body": {
+            "event_id": "evt_238f4b9c",
+            "kind": "builtin",
+            "label": "Dog bark",
+            "sound_id": "builtin_dog_bark",
+            "confidence": 0.84,
+            "description": null,
+            "latency_ms": 573
+          },
+          "ended_ms": 6859.29999999702
+        },
+        {
+          "started_ms": 9081.20000000298,
+          "status": 200,
+          "body": {
+            "event_id": "evt_238f4b9c",
+            "kind": "builtin",
+            "label": "Dog bark",
+            "sound_id": "builtin_dog_bark",
+            "confidence": 0.8,
+            "description": null,
+            "latency_ms": 594
+          },
+          "ended_ms": 9687.39999999106
+        }
+      ],
+      "alerts": [
+        {
+          "at_ms": 4468.70000000298,
+          "text": "hear for you.\nAlert remains visible until dismissed\n\nRECOGNIZED SOUND\n\nDog bark\n\n77% confidence\n\nDetected just now\n\nDismiss alert"
+        }
+      ],
+      "local_history_count": 1,
+      "no_gate_request": false,
+      "request_failures": 0,
+      "positive_without_alert": false,
+      "negative_with_alert": false,
+      "needs_manual_event_matching": false
+    },
+    {
+      "trial_id": "bigsoundbank_0165",
+      "expected_label": "footsteps",
+      "duration_seconds": 8.6988125,
+      "capture_kind": "public_recording",
+      "source_group": "bigsoundbank_0165",
+      "held_out_eligible": true,
+      "calls": [
+        {
+          "started_ms": 3575.7999999970198,
+          "status": 200,
+          "body": {
+            "event_id": "evt_1d9cb4ba",
+            "kind": "unknown",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": "Someone is knocking on a door.",
+            "latency_ms": 2015
+          },
+          "ended_ms": 5599
+        },
+        {
+          "started_ms": 6078.5,
+          "status": 200,
+          "body": {
+            "event_id": "evt_fff8d4c1",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 621
+          },
+          "ended_ms": 6707.0999999940395
+        },
+        {
+          "started_ms": 8580.79999999702,
+          "status": 200,
+          "body": {
+            "event_id": "evt_77cfdaf0",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 534
+          },
+          "ended_ms": 9123.89999999106
+        }
+      ],
+      "alerts": [
+        {
+          "at_ms": 5605.5999999940395,
+          "text": "hear for you.\nAlert remains visible until dismissed\n\nUNKNOWN SOUND\n\nWhat was that?\n\nSomeone is knocking on a door.\n\nDetected just now\n\nDismiss alert"
+        }
+      ],
+      "local_history_count": 1,
+      "no_gate_request": false,
+      "request_failures": 0,
+      "positive_without_alert": false,
+      "negative_with_alert": true,
+      "needs_manual_event_matching": false
+    },
+    {
+      "trial_id": "bigsoundbank_0229",
+      "expected_label": "typing",
+      "duration_seconds": 30.1714375,
+      "capture_kind": "public_recording",
+      "source_group": "bigsoundbank_0229",
+      "held_out_eligible": true,
+      "calls": [
+        {
+          "started_ms": 5486.9000000059605,
+          "status": 200,
+          "body": {
+            "event_id": "evt_123620a2",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 1865
+          },
+          "ended_ms": 7365.5
+        },
+        {
+          "started_ms": 17288.10000000894,
+          "status": 200,
+          "body": {
+            "event_id": "evt_db53a8aa",
+            "kind": "unknown",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": "Someone is knocking on a door.",
+            "latency_ms": 1914
+          },
+          "ended_ms": 19208.70000000298
+        },
+        {
+          "started_ms": 22287,
+          "status": 200,
+          "body": {
+            "event_id": "evt_15c10ada",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 495
+          },
+          "ended_ms": 22788.90000000596
+        },
+        {
+          "started_ms": 27486.29999999702,
+          "status": 200,
+          "body": {
+            "event_id": "evt_c3d29415",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 1958
+          },
+          "ended_ms": 29463
+        },
+        {
+          "started_ms": 30893.29999999702,
+          "status": 200,
+          "body": {
+            "event_id": "evt_f408f8f9",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 533
+          },
+          "ended_ms": 31435.90000000596
+        }
+      ],
+      "alerts": [
+        {
+          "at_ms": 19214.29999999702,
+          "text": "hear for you.\nAlert remains visible until dismissed\n\nUNKNOWN SOUND\n\nWhat was that?\n\nSomeone is knocking on a door.\n\nDetected just now\n\nDismiss alert"
+        }
+      ],
+      "local_history_count": 1,
+      "no_gate_request": false,
+      "request_failures": 0,
+      "positive_without_alert": false,
+      "negative_with_alert": true,
+      "needs_manual_event_matching": false
+    },
+    {
+      "trial_id": "bigsoundbank_0684",
+      "expected_label": "speech",
+      "duration_seconds": 120.384,
+      "capture_kind": "public_recording",
+      "source_group": "bigsoundbank_0684",
+      "held_out_eligible": true,
+      "calls": [
+        {
+          "started_ms": 49531.20000000298,
+          "status": 200,
+          "body": {
+            "event_id": "evt_dcd62f7a",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 5260
+          },
+          "ended_ms": 54811.10000000894
+        },
+        {
+          "started_ms": 122055.30000001192,
+          "status": 200,
+          "body": {
+            "event_id": "evt_637b177c",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 2019
+          },
+          "ended_ms": 124092.20000000298
+        }
+      ],
+      "alerts": [],
+      "local_history_count": 0,
+      "no_gate_request": false,
+      "request_failures": 0,
+      "positive_without_alert": false,
+      "negative_with_alert": false,
+      "needs_manual_event_matching": false
+    },
+    {
+      "trial_id": "bigsoundbank_1427",
+      "expected_label": "desk_tapping",
+      "duration_seconds": 14.7254375,
+      "capture_kind": "public_recording",
+      "source_group": "bigsoundbank_table_tapping_series",
+      "held_out_eligible": true,
+      "calls": [
+        {
+          "started_ms": 3369.1000000089407,
+          "status": 200,
+          "body": {
+            "event_id": "evt_e93e30f9",
+            "kind": "unknown",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": "Someone is knocking on a door.",
+            "latency_ms": 1730
+          },
+          "ended_ms": 5113.100000008941
+        },
+        {
+          "started_ms": 5863.20000000298,
+          "status": 200,
+          "body": {
+            "event_id": "evt_5d1e6ad6",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 646
+          },
+          "ended_ms": 6516.9000000059605
+        },
+        {
+          "started_ms": 8664.10000000894,
+          "status": 200,
+          "body": {
+            "event_id": "evt_7f5cf0b1",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 697
+          },
+          "ended_ms": 9393.40000000596
+        },
+        {
+          "started_ms": 11667.60000000894,
+          "status": 200,
+          "body": {
+            "event_id": "evt_e8fe6407",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 1281
+          },
+          "ended_ms": 12955.10000000894
+        },
+        {
+          "started_ms": 14465.5,
+          "status": 200,
+          "body": {
+            "event_id": "evt_6ff8fb07",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 1892
+          },
+          "ended_ms": 16367.5
+        }
+      ],
+      "alerts": [
+        {
+          "at_ms": 5121.100000008941,
+          "text": "hear for you.\nAlert remains visible until dismissed\n\nUNKNOWN SOUND\n\nWhat was that?\n\nSomeone is knocking on a door.\n\nDetected just now\n\nDismiss alert"
+        }
+      ],
+      "local_history_count": 1,
+      "no_gate_request": false,
+      "request_failures": 0,
+      "positive_without_alert": false,
+      "negative_with_alert": true,
+      "needs_manual_event_matching": false
+    },
+    {
+      "trial_id": "bigsoundbank_1463",
+      "expected_label": "builtin_siren",
+      "duration_seconds": 20.089,
+      "capture_kind": "public_recording",
+      "source_group": "bigsoundbank_1463",
+      "held_out_eligible": true,
+      "calls": [
+        {
+          "started_ms": 4551.9000000059605,
+          "status": 200,
+          "body": {
+            "event_id": "evt_2ea1ff00",
+            "kind": "unknown",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": "A microwave oven is chiming.",
+            "latency_ms": 1819
+          },
+          "ended_ms": 6377.20000000298
+        },
+        {
+          "started_ms": 7051.29999999702,
+          "status": 200,
+          "body": {
+            "event_id": "evt_ed879453",
+            "kind": "none",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": null,
+            "latency_ms": 630
+          },
+          "ended_ms": 7689.5
+        },
+        {
+          "started_ms": 10557.90000000596,
+          "status": 200,
+          "body": {
+            "event_id": "evt_051a94cd",
+            "kind": "builtin",
+            "label": "Siren",
+            "sound_id": "builtin_siren",
+            "confidence": 0.65,
+            "description": null,
+            "latency_ms": 659
+          },
+          "ended_ms": 11227.40000000596
+        },
+        {
+          "started_ms": 13050.40000000596,
+          "status": 200,
+          "body": {
+            "event_id": "evt_051a94cd",
+            "kind": "builtin",
+            "label": "Siren",
+            "sound_id": "builtin_siren",
+            "confidence": 0.79,
+            "description": null,
+            "latency_ms": 576
+          },
+          "ended_ms": 13637.20000000298
+        },
+        {
+          "started_ms": 16755.90000000596,
+          "status": 200,
+          "body": {
+            "event_id": "evt_a7a8577e",
+            "kind": "unknown",
+            "label": null,
+            "sound_id": null,
+            "confidence": null,
+            "description": "An alarm or beeping sound is ringing.",
+            "latency_ms": 1757
+          },
+          "ended_ms": 18924.70000000298
+        },
+        {
+          "started_ms": 19050,
+          "status": 200,
+          "body": {
+            "event_id": "evt_051a94cd",
+            "kind": "builtin",
+            "label": "Siren",
+            "sound_id": "builtin_siren",
+            "confidence": 0.66,
+            "description": null,
+            "latency_ms": 684
+          },
+          "ended_ms": 19744.90000000596
+        }
+      ],
+      "alerts": [
+        {
+          "at_ms": 6386,
+          "text": "hear for you.\nAlert remains visible until dismissed\n\nUNKNOWN SOUND\n\nWhat was that?\n\nA microwave oven is chiming.\n\nDetected just now\n\nDismiss alert"
+        },
+        {
+          "at_ms": 11230.29999999702,
+          "text": "hear for you.\nAlert remains visible until dismissed\n\nRECOGNIZED SOUND\n\nSiren\n\n65% confidence\n\nDetected just now\n\nDismiss alert"
+        },
+        {
+          "at_ms": 18930.40000000596,
+          "text": "hear for you.\nAlert remains visible until dismissed\n\nUNKNOWN SOUND\n\nWhat was that?\n\nAn alarm or beeping sound is ringing.\n\nDetected just now\n\nDismiss alert"
+        }
+      ],
+      "local_history_count": 3,
+      "no_gate_request": false,
+      "request_failures": 0,
+      "positive_without_alert": false,
+      "negative_with_alert": false,
+      "needs_manual_event_matching": true
+    }
+  ]
+}

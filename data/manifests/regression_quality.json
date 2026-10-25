@@ -1,0 +1,46 @@
+{
+  "capture_kinds": {
+    "public_recording": 21
+  },
+  "collection_target_met": false,
+  "independent_groups": 18,
+  "primary_device": null,
+  "reliability_established": false,
+  "source_counts": {
+    "builtin_crying_baby": 1,
+    "builtin_dog_bark": 1,
+    "builtin_door_knock": 3,
+    "builtin_siren": 1,
+    "desk_tapping": 3,
+    "fan_ac": 3,
+    "footsteps": 3,
+    "speech": 3,
+    "typing": 3
+  },
+  "target_deficits": {
+    "builtin_door_knock/across_room": 5,
+    "builtin_door_knock/another_room": 5,
+    "builtin_door_knock/near": 5,
+    "desk_tapping/across_room": 5,
+    "desk_tapping/another_room": 5,
+    "desk_tapping/near": 5,
+    "extended/builtin_crying_baby": 4,
+    "extended/builtin_dog_bark": 4,
+    "extended/builtin_glass_breaking": 5,
+    "extended/builtin_siren": 4,
+    "extended/builtin_smoke_alarm": 5,
+    "extended/fan_ac": 3,
+    "extended/reverberant": 5,
+    "extended/sustained": 2,
+    "extended/television_music": 5,
+    "footsteps/across_room": 5,
+    "footsteps/another_room": 5,
+    "footsteps/near": 5,
+    "speech/across_room": 5,
+    "speech/another_room": 5,
+    "speech/near": 5,
+    "typing/across_room": 5,
+    "typing/another_room": 5,
+    "typing/near": 5
+  }
+}

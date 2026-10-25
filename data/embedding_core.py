@@ -16,7 +16,7 @@ import numpy as np
 from google import genai
 from google.genai import errors, types
 
-from convert import BACKGROUND_VERSION, PREPROCESS_VERSION, validate_wav
+from convert import BACKGROUND_VERSION, CORPUS_PREPROCESS_VERSION, PREPROCESS_VERSION, validate_wav
 from dataset_io import DATA, ROOT, atomic_bytes, manifest_bytes, sha256_file, write_json
 
 MODEL = "gemini-embedding-2"
@@ -48,9 +48,11 @@ def save_array(path: Path, array: np.ndarray) -> None:
 
 
 def fingerprint(row: dict[str, str], wav: bytes) -> str:
+    preprocessing = (CORPUS_PREPROCESS_VERSION if row.get("source") in {
+        "direct_capture", "speaker_playback", "public_recording", "simulation"} else
+        BACKGROUND_VERSION if row.get("source") == "ours" and row.get("label") == "background" else PREPROCESS_VERSION)
     identity = {"clip_id": row["clip_id"], "audio_sha256": hashlib.sha256(wav).hexdigest(),
-                "model": MODEL, "dim": DIM, "preprocessing": (BACKGROUND_VERSION
-                    if row.get("source") == "ours" and row.get("label") == "background" else PREPROCESS_VERSION)}
+                "model": MODEL, "dim": DIM, "preprocessing": preprocessing}
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
