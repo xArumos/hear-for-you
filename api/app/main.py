@@ -1,6 +1,7 @@
 """FastAPI app. Routes only; logic lives in the other app modules."""
 
 import logging
+import threading
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -8,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, Form, Query, Request, Response, UploadFile
 from pydantic import BaseModel
 
-from app import audio, detectors, metrics, store, teach
+from app import audio, detectors, gemini, metrics, store, teach
 from app.config import settings
 from app.errors import BadRequest, install_handlers
 
@@ -20,6 +21,12 @@ log = logging.getLogger("hear-for-you.api")
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     store.init_db()
     detectors.load_builtin()
+    if settings.describe_model.startswith(gemini.LOCAL_PREFIX):
+        from app import gemma_local
+
+        # Load in the background so the server starts now; describes return none until it's ready.
+        model_id = settings.describe_model.removeprefix(gemini.LOCAL_PREFIX)
+        threading.Thread(target=gemma_local.warm_up, args=(model_id,), daemon=True).start()
     yield
 
 

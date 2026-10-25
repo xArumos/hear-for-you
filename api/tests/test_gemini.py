@@ -1,6 +1,7 @@
 """gemini.py retry and mapping logic, against a fake client. No network."""
 
 from collections.abc import Callable
+from dataclasses import replace
 from types import SimpleNamespace
 
 import httpx
@@ -158,4 +159,36 @@ def test_describe_failure_returns_none(
     monkeypatch: pytest.MonkeyPatch, outcomes: list[Callable[[], object]]
 ) -> None:
     install_fake(monkeypatch, outcomes)
+    assert gemini.describe_relevance(b"wav") is None
+
+
+def install_local(monkeypatch: pytest.MonkeyPatch, reply: str | None) -> list[tuple[str, str, bytes]]:
+    """Point DESCRIBE_MODEL at a local model and fake gemma_local.describe (no torch)."""
+    from app import gemma_local
+
+    calls: list[tuple[str, str, bytes]] = []
+
+    def fake(model_id: str, prompt: str, wav: bytes) -> str | None:
+        calls.append((model_id, prompt, wav))
+        return reply
+
+    monkeypatch.setattr(gemini, "settings", replace(settings, describe_model="local:google/gemma-4-E4B-it"))
+    monkeypatch.setattr(gemma_local, "describe", fake)
+    return calls
+
+
+def test_local_model_routes_to_gemma(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = install_local(monkeypatch, '{"relevant": true, "description": "A dog barking."}')
+    assert gemini.describe_relevance(b"wav") == gemini.Described(True, "A dog barking.")
+    assert calls == [("google/gemma-4-E4B-it", gemini.RELEVANCE_PROMPT, b"wav")]
+
+
+def test_local_model_fenced_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    install_local(monkeypatch, '```json\n{"relevant": false, "description": "Typing."}\n```')
+    assert gemini.describe_relevance(b"wav") == gemini.Described(False, "Typing.")
+
+
+@pytest.mark.parametrize("reply", [None, "A dog barking.", '{"relevant": "yes", "description": "x"}'])
+def test_local_model_failure_returns_none(monkeypatch: pytest.MonkeyPatch, reply: str | None) -> None:
+    install_local(monkeypatch, reply)
     assert gemini.describe_relevance(b"wav") is None

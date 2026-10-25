@@ -126,11 +126,36 @@ class Described:
     description: str
 
 
+LOCAL_PREFIX = "local:"
+
+
+def _parse_described(text: str) -> Described | None:
+    """Parse the describe model's JSON reply; None if it isn't the shape we asked for."""
+    body = text.strip()
+    if body.startswith("```"):  # local models may wrap the JSON in a markdown fence
+        body = body.strip("`").removeprefix("json").strip()
+    try:
+        reply = json.loads(body)
+        relevant, description = reply["relevant"], reply["description"]
+    except (ValueError, TypeError, KeyError):
+        log.warning("describe failed: malformed_reply")
+        return None
+    if not isinstance(relevant, bool) or not isinstance(description, str) or not description.strip():
+        log.warning("describe failed: malformed_reply")
+        return None
+    return Described(relevant, _shorten(description))
+
+
 def describe_relevance(wav: bytes) -> Described | None:
     """Ask the describe model what an unknown sound is and whether it may need attention.
 
     None if the call fails or the reply isn't the JSON we asked for.
     """
+    if settings.describe_model.startswith(LOCAL_PREFIX):
+        from app import gemma_local
+
+        text = gemma_local.describe(settings.describe_model.removeprefix(LOCAL_PREFIX), RELEVANCE_PROMPT, wav)
+        return None if text is None else _parse_described(text)
     try:
         client = _get_client()
 
@@ -147,13 +172,4 @@ def describe_relevance(wav: bytes) -> Described | None:
     except ApiError as exc:
         log.warning("describe failed: %s", exc.code)
         return None
-    try:
-        reply = json.loads(response.text or "")
-        relevant, text = reply["relevant"], reply["description"]
-    except (ValueError, TypeError, KeyError):
-        log.warning("describe failed: malformed_reply")
-        return None
-    if not isinstance(relevant, bool) or not isinstance(text, str) or not text.strip():
-        log.warning("describe failed: malformed_reply")
-        return None
-    return Described(relevant, _shorten(text))
+    return _parse_described(response.text or "")

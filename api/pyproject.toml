@@ -17,7 +17,25 @@ dev = [
     "httpx>=0.28.1",
     "pytest>=9.1.1",
 ]
+gemma = [
+    "accelerate>=1.15.0",
+    "librosa>=1.0.0",
+    "torch>=2.14.1",
+    "torchvision>=0.29.1",
+    "transformers>=5.20.2",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+# Experimental local Gemma describe backend (p1/gemma-experiment). Not installed by default:
+# `uv sync --group gemma`. CPU-only torch so no CUDA wheels are pulled.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
