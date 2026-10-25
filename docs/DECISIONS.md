@@ -27,7 +27,7 @@ probabilities to two decimals, so frontend admission now allows a wire value of
 0.60 rather than rejecting it. Enabled-category and other relevance checks stay
 in place. This corrects a serialization boundary mismatch, not global sensitivity.
 See `DOOR_KNOCK_INVESTIGATION.md` for real-audio results, existing typing false
-alerts, and P1 proposals awaiting approval. No backend thresholds were changed.
+alerts, and the P1 handoff in issue #27. No backend thresholds were changed.
 
 ### 2026-10-24 — Bundle the existing frontend for foreground iOS use (P2, user approved)
 

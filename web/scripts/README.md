@@ -20,9 +20,11 @@ npm run evaluate:detection -- /absolute/path/manifest.json \
 Use an interval of at least 10,100 ms when measuring unknown-description behavior
 so the backend's describe limit does not suppress cases. A shorter interval is
 appropriate for expected built-ins but will record real rate-limit/grouping
-behavior. Each response, confidence supplied by the API, frontend admission, and
-enabled built-in list is written as JSON. Misses remain misses; the command does
-not change expected values to make a run pass.
+behavior. Each response, confidence supplied by the API, sequential frontend
+admission, independent frontend eligibility, and enabled built-in list is written
+as JSON. The independent value uses a fresh policy so intentional duplicate and
+ongoing grouping is distinguishable from recognition. Misses remain misses; the
+command does not change expected values to make a run pass.
 
 The runner does not prove physical distance, microphone capture, reverberation or
 room-noise performance unless the manifest uses recordings made under those

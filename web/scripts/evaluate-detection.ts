@@ -21,6 +21,7 @@ interface EvaluationResult {
   status: number;
   response: DetectResponse;
   frontend_alert: boolean;
+  frontend_eligible_independently: boolean;
   correct_builtin: boolean;
   false_alert: boolean;
 }
@@ -105,6 +106,7 @@ async function main(): Promise<void> {
     previousRequestAt = Date.now();
     const { status, body } = await detect(endpoint, wav, levelDb);
     const frontendAlert = policy.accept(body, sounds, performance.now());
+    const frontendEligibleIndependently = new AlertPolicy().accept(body, sounds, performance.now());
     const correctBuiltin = item.expected_sound_id !== null && body.kind === 'builtin' && body.sound_id === item.expected_sound_id;
     const falseAlert = item.expected_sound_id === null && frontendAlert;
     results.push({
@@ -116,6 +118,7 @@ async function main(): Promise<void> {
       status,
       response: body,
       frontend_alert: frontendAlert,
+      frontend_eligible_independently: frontendEligibleIndependently,
       correct_builtin: correctBuiltin,
       false_alert: falseAlert,
     });
