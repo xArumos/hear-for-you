@@ -115,7 +115,7 @@ No controlled loud/normal/distance labels, laptop-tapping or ordinary speech
 recordings are available. No distance reliability claim. No real phone, live room
 microphone or browser click-through was available in this investigation.
 
-## P1 approval needed before backend edits
+## Backend handoff to P1
 
 1. Add sanitized server-side diagnostic logs for all outcomes: top-class scores,
    taught/builtin/disabled decisions, fallback skip reason, rate-limit and grouping
@@ -130,7 +130,9 @@ microphone or browser click-through was available in this investigation.
    global sensitivity unchanged. Overlapping windows also require measured capture
    evidence and quota/backoff tests, rather than changing all capture now.
 
-The user requested approval before any P1 code edit; none was made.
+No P1-owned code was changed. Backend diagnosis and proposed work are assigned to
+P1 in GitHub issue #27:
+https://github.com/xArumos/hear-for-you/issues/27
 
 The spaced FastAPI run on each first gate window returned HTTP 200 for all four:
 
