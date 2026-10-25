@@ -23,11 +23,19 @@ test('mixed events and meaningful unknown descriptions remain eligible without f
     assert.equal(new AlertPolicy().accept(unknown(text), sounds, 0), true, text);
 });
 test('invalid and below-backend-threshold scores fail; existing matched targets and taught scores pass', () => {
-  for (const confidence of [null, NaN, Infinity, -0.1, 0.59, 0.6, 1.1])
+  for (const confidence of [null, NaN, Infinity, -0.1, 0.59, 1.1])
     assert.equal(new AlertPolicy().accept(event({ confidence }), sounds, 0), false);
   assert.equal(new AlertPolicy().accept(event({ confidence: 0.61 }), sounds, 0), true);
   assert.equal(new AlertPolicy().accept(event({ kind: 'taught', sound_id: 'snd_voice', confidence: 0.5 }), sounds, 0), true);
   assert.equal(new AlertPolicy().accept(event({ kind: 'taught', sound_id: 'snd_voice', confidence: 0.49 }), sounds, 0), false);
+});
+test('backend-admitted built-ins survive confidence rounding at the cutoff', () => {
+  for (const sound_id of ['builtin_door_knock', 'builtin_dog_bark', 'builtin_glass_breaking']) {
+    // Mirrors detectors.detect: a valid raw probability > 0.6 rounds to 0.60.
+    const confidence = Math.round(0.604 * 100) / 100;
+    assert.equal(new AlertPolicy().accept(event({ sound_id, confidence }), sounds, 0), true);
+    assert.equal(new AlertPolicy().accept(event({ sound_id, confidence }), sounds.map(sound => ({ ...sound, enabled: false })), 0), false);
+  }
 });
 test('sustained events alert immediately, group continued observations, and rearm after a gap', () => {
   const policy = new AlertPolicy();
