@@ -4,6 +4,7 @@ import { openMicrophone, recordMicrophoneClip } from './recorder.ts';
 import { validateWavFile } from './wav.ts';
 
 test('independent sessions release tracks on completion, initialization errors, cancellation and device loss', async () => {
+  const events = new EventTarget();
   const descriptors = Object.getOwnPropertyDescriptors(globalThis);
   let acquired = 0, stopped = 0, closed = 0;
   let failure: Error | undefined;
@@ -26,7 +27,7 @@ test('independent sessions release tracks on completion, initialization errors, 
     }, 0); } }; }
   }
   Object.defineProperties(globalThis, {
-    window: { value: { isSecureContext: true }, configurable: true },
+    window: { value: { isSecureContext: true, addEventListener: events.addEventListener.bind(events), removeEventListener: events.removeEventListener.bind(events) }, configurable: true },
     navigator: { value: { mediaDevices: { async getUserMedia() {
       acquired++;
       if (failure) throw failure;
@@ -68,6 +69,18 @@ test('independent sessions release tracks on completion, initialization errors, 
     assert.match(deviceError?.message ?? '', /disconnected/);
     await session.stop(); await session.stop();
     assert.equal(stopped, 10); assert.equal(closed, 8);
+    const active = await openMicrophone(() => {}, { onError: error => { deviceError = error; } });
+    events.dispatchEvent(new Event('hear-for-you-native-inactive'));
+    assert.match(deviceError?.message ?? '', /backgrounded/);
+    await active.stop();
+    assert.equal(stopped, 11); assert.equal(closed, 9);
+    delayGrant = true;
+    const pending = openMicrophone(() => {}, { onError: () => {} });
+    events.dispatchEvent(new Event('hear-for-you-native-inactive'));
+    grant?.();
+    await assert.rejects(pending, { name: 'AbortError' });
+    assert.equal(stopped, 12); // late native permission grant must not leak its track
+
   } finally {
     for (const key of ['window', 'navigator', 'AudioContext', 'AudioWorkletNode']) {
       if (descriptors[key]) Object.defineProperty(globalThis, key, descriptors[key]);

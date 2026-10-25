@@ -25,9 +25,11 @@ export function useListening(onDetection: (result: DetectResponse) => void, page
     const preview = syncPreviews;
     for (const event of ['play', 'pause', 'ended', 'error']) document.addEventListener(event, preview, true);
     window.addEventListener('pagehide', stop);
+    window.addEventListener('hear-for-you-native-inactive', stop);
     return () => {
       for (const event of ['play', 'pause', 'ended', 'error']) document.removeEventListener(event, preview, true);
       window.removeEventListener('pagehide', stop);
+      window.removeEventListener('hear-for-you-native-inactive', stop);
       stop();
     };
   }, [session]);

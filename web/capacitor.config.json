@@ -1,0 +1,20 @@
+{
+  "appId": "dev.hearforyou.app",
+  "appName": "HearAlert",
+  "webDir": "dist",
+  "server": {
+    "hostname": "localhost",
+    "iosScheme": "capacitor"
+  },
+  "ios": {
+    "contentInset": "never",
+    "preferredContentMode": "mobile",
+    "zoomEnabled": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  },
+  "loggingBehavior": "none"
+}
