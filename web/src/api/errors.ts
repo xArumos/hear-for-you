@@ -9,6 +9,14 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** A validly shaped request whose samples are below the backend audio floor. */
+export function isSilentClipError(error: unknown): boolean {
+  return error instanceof ApiRequestError
+    && error.status === 400
+    && error.code === 'bad_audio'
+    && /^clip is silent\.?$/i.test(error.message.trim());
+}
+
 export class DetectionRetryBudget {
   private failures = 0;
   success(): void { this.failures = 0; }

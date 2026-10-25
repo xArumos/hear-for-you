@@ -1,5 +1,5 @@
 import type { DetectResponse } from '../api/types.ts';
-import { DetectionRetryBudget } from '../api/errors.ts';
+import { DetectionRetryBudget, isSilentClipError } from '../api/errors.ts';
 import { explainMicrophoneError, type CaptureSession } from './recorder.ts';
 
 export interface ListeningState {
@@ -15,6 +15,9 @@ interface Dependencies {
 }
 
 export const PENDING_CLIP_MAX_AGE_MS = 5_000;
+// Matches the backend's audio-validity floor, not its detection thresholds.
+// Clips below this cannot be classified; skipping them does not change recognition sensitivity.
+export const SILENT_CLIP_DBFS = -60;
 const MIN_REQUEST_GAP_MS = 1_000;
 
 /** Owned by App, never by a page. Serialize capture teardown before acquiring again. */
@@ -127,6 +130,11 @@ export class ListeningSession {
         this.deps.onDetection(result);
       }).catch(error => {
         if (controller.signal.aborted) return;
+        if (isSilentClipError(error)) {
+          retries.success();
+          this.update('active');
+          return;
+        }
         const retry = retries.failure(error);
         const message = error instanceof Error ? error.message : 'Detection request failed.';
         if (retry.stop) this.fail(`${message} Listening stopped. Resolve the backend issue, then start again.`);
@@ -167,6 +175,7 @@ export class ListeningSession {
           onError: error => { if (!controller.signal.aborted) this.fail(explainMicrophoneError(error)); },
           onClip: (clip, levelDb) => {
             if (controller.signal.aborted) return;
+            if (levelDb < SILENT_CLIP_DBFS) return;
             if (busy || this.deps.now() < nextRequestAt) {
               pending = { clip, levelDb, capturedAt: this.deps.now() };
               submitPending();

@@ -1,11 +1,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ApiRequestError, DetectionRetryBudget } from './errors.ts';
+import { ApiRequestError, DetectionRetryBudget, isSilentClipError } from './errors.ts';
 
 test('preserves HTTP status, contract code and server retry delay', () => {
   const error = new ApiRequestError('Busy', 7000, 429, 'rate_limited');
   assert.equal(error.status, 429); assert.equal(error.code, 'rate_limited');
   assert.deepEqual(new DetectionRetryBudget().failure(error), { stop: false, delayMs: 7000 });
+});
+
+test('distinguishes normal silence from corrupted or otherwise invalid audio', () => {
+  assert.equal(isSilentClipError(new ApiRequestError('Clip is silent.', 0, 400, 'bad_audio')), true);
+  assert.equal(isSilentClipError(new ApiRequestError('Got 8 kHz. Clip must be 16 kHz.', 0, 400, 'bad_audio')), false);
+  assert.equal(isSilentClipError(new ApiRequestError('Clip is silent.', 0, 422, 'bad_request')), false);
 });
 
 test('authentication, invalid models, quota and opaque nonretryable Gemini failures stop immediately', () => {
