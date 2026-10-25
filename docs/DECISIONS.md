@@ -12,6 +12,7 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 | Embedding size | 768 | Faster training and search than the 3,072 default | `EMBED_DIM` |
 | Gate threshold | room baseline + 12 dB | Starting value; tune Saturday | `web/` |
 | Detect cap | 1 call per second | Stay under free-tier limits | `MAX_DETECT_PER_SEC` |
+| Pending detection clip age | 5 s | Preserve one brief event during a normal request, but discard stale audio during long requests/backoff | `PENDING_CLIP_MAX_AGE_MS` in `web/src/audio/listening-session.ts` |
 | Describe cap | 1 call per 10 s | At most 6 describe calls a minute (12 with retries), under 3.5 Flash-Lite's 15 RPM | `MAX_DESCRIBE_PER_SEC` |
 | Gemini timeout / retries | 10 s / 1 retry on 429 or 5xx | Fail fast during a live demo | `api/` |
 | Smoke-alarm rule | Beeps 0.3–0.8 s, gaps 0.3–0.8 s or 1.1–2.2 s, tone ≥ 40% of frame energy, ±5% steady | Tolerant T3 timing for phone mics and echo; tune with real recordings (#14) | `api/app/smoke_alarm.py` |
@@ -19,6 +20,17 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 | Taught threshold mix | 0.5 (midpoint) | Threshold sits halfway between the room's best score and cos(example 1, example 2); tune with eval | `THRESHOLD_MIX` in `api/app/teach.py` |
 
 ## Log
+
+### 2026-10-25 — Keep one fresh detection window while a request is busy (P2, issue #29)
+
+The listener keeps only the newest completed analysis window while one detection
+request is active or the one-second request gap/backoff is still running. It never
+queues more than one clip, submits no more than one request at once, and expires
+the clip after five seconds. Stop, Teach, preview, microphone interruption and
+session restart clear it. Audio stays only in memory and is never added to History
+unless the normal backend response passes the existing alert policy. This reduces
+missed brief events without changing microphone sensitivity, backend thresholds,
+the API contract or the UI.
 
 ### 2026-10-24 — Backend decides relevance before history (P1, issue #22)
 

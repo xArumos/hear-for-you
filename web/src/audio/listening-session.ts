@@ -11,7 +11,11 @@ interface Dependencies {
   detect(clip: Blob, levelDb: number, signal: AbortSignal): Promise<DetectResponse>;
   onDetection(result: DetectResponse): void;
   now(): number;
+  schedule?(callback: () => void, delayMs: number): () => void;
 }
+
+export const PENDING_CLIP_MAX_AGE_MS = 5_000;
+const MIN_REQUEST_GAP_MS = 1_000;
 
 /** Owned by App, never by a page. Serialize capture teardown before acquiring again. */
 export class ListeningSession {
@@ -90,6 +94,11 @@ export class ListeningSession {
     this.update('paused', error);
     void this.release();
   }
+  private schedule(callback: () => void, delayMs: number): () => void {
+    if (this.deps.schedule) return this.deps.schedule(callback, delayMs);
+    const timer = setTimeout(callback, delayMs);
+    return () => clearTimeout(timer);
+  }
   private launch(): void {
     if (this.controller || !this.enabled || this.teaching || this.previewing) return;
     const controller = new AbortController();
@@ -98,7 +107,56 @@ export class ListeningSession {
     const cleanup = this.cleanup;
     const recording = this.recording;
     let busy = false, nextRequestAt = 0;
+    let pending: { clip: Blob; levelDb: number; capturedAt: number } | null = null;
+    let cancelScheduled: (() => void) | null = null;
     const retries = new DetectionRetryBudget();
+    const clearPending = () => {
+      pending = null;
+      cancelScheduled?.();
+      cancelScheduled = null;
+    };
+    controller.signal.addEventListener('abort', clearPending, { once: true });
+
+    const submit = (clip: Blob, levelDb: number): void => {
+      if (controller.signal.aborted) return;
+      busy = true;
+      nextRequestAt = this.deps.now() + MIN_REQUEST_GAP_MS;
+      void this.deps.detect(clip, levelDb, controller.signal).then(result => {
+        if (controller.signal.aborted) return;
+        retries.success(); this.update('active');
+        this.deps.onDetection(result);
+      }).catch(error => {
+        if (controller.signal.aborted) return;
+        const retry = retries.failure(error);
+        const message = error instanceof Error ? error.message : 'Detection request failed.';
+        if (retry.stop) this.fail(`${message} Listening stopped. Resolve the backend issue, then start again.`);
+        else {
+          nextRequestAt = this.deps.now() + retry.delayMs;
+          this.update('active', `${message} Waiting before the next detection attempt.`);
+        }
+      }).finally(() => {
+        busy = false;
+        submitPending();
+      });
+    };
+
+    const submitPending = (): void => {
+      cancelScheduled?.();
+      cancelScheduled = null;
+      if (!pending || busy || controller.signal.aborted) return;
+      const age = this.deps.now() - pending.capturedAt;
+      if (age >= PENDING_CLIP_MAX_AGE_MS) { pending = null; return; }
+      const requestDelay = Math.max(0, nextRequestAt - this.deps.now());
+      if (requestDelay > 0) {
+        const staleDelay = PENDING_CLIP_MAX_AGE_MS - age;
+        cancelScheduled = this.schedule(submitPending, Math.min(requestDelay, staleDelay));
+        return;
+      }
+      const next = pending;
+      pending = null;
+      submit(next.clip, next.levelDb);
+    };
+
     this.opening = (async () => {
       await cleanup;
       await recording;
@@ -108,23 +166,13 @@ export class ListeningSession {
           signal: controller.signal,
           onError: error => { if (!controller.signal.aborted) this.fail(explainMicrophoneError(error)); },
           onClip: (clip, levelDb) => {
-            if (controller.signal.aborted || busy || this.deps.now() < nextRequestAt) return;
-            busy = true;
-            nextRequestAt = this.deps.now() + 1000;
-            void this.deps.detect(clip, levelDb, controller.signal).then(result => {
-              if (controller.signal.aborted) return;
-              retries.success(); this.update('active');
-              this.deps.onDetection(result);
-            }).catch(error => {
-              if (controller.signal.aborted) return;
-              const retry = retries.failure(error);
-              const message = error instanceof Error ? error.message : 'Detection request failed.';
-              if (retry.stop) this.fail(`${message} Listening stopped. Resolve the backend issue, then start again.`);
-              else {
-                nextRequestAt = this.deps.now() + retry.delayMs;
-                this.update('active', `${message} Waiting before the next detection attempt.`);
-              }
-            }).finally(() => { busy = false; });
+            if (controller.signal.aborted) return;
+            if (busy || this.deps.now() < nextRequestAt) {
+              pending = { clip, levelDb, capturedAt: this.deps.now() };
+              submitPending();
+              return;
+            }
+            submit(clip, levelDb);
           },
         });
         if (controller.signal.aborted) { await capture.stop(); return; }
