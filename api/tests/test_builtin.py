@@ -1,4 +1,5 @@
 import csv
+import logging
 from pathlib import Path
 
 import joblib
@@ -24,9 +25,9 @@ class FakeClassifier:
         return self.proba
 
 
-def install(monkeypatch: pytest.MonkeyPatch, proba: list[float]) -> None:
+def install(monkeypatch: pytest.MonkeyPatch, proba: list[float], classes: list[str] = CLASSES) -> None:
     monkeypatch.setattr(
-        detectors, "_builtin", detectors.BuiltinModel(FakeClassifier(proba), CLASSES)
+        detectors, "_builtin", detectors.BuiltinModel(FakeClassifier(proba), classes)
     )
     monkeypatch.setattr(gemini, "embed_audio", lambda wav: basis((9, 1.0)))
 
@@ -111,3 +112,69 @@ def test_committed_model_matches_eval_results() -> None:
     for row in expected:
         match = detectors.match_builtin(X[index[row["clip_id"]]])
         assert (match[0] if match else "other") == row["predicted"], row["clip_id"]
+
+
+DISCRETE = ["builtin_door_knock", "builtin_glass_breaking", "other"]
+
+
+@pytest.mark.parametrize("sound_id", ["builtin_door_knock", "builtin_glass_breaking"])
+def test_discrete_sounds_are_never_grouped(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, sound_id: str
+) -> None:
+    proba = [0.9, 0.05, 0.05] if sound_id == "builtin_door_knock" else [0.05, 0.9, 0.05]
+    install(monkeypatch, proba, DISCRETE)
+    first = post_detect(client, make_wav()).json()
+    ratelimit.detect_limiter.reset()
+    second = post_detect(client, make_wav()).json()
+    assert first["sound_id"] == second["sound_id"] == sound_id
+    assert first["event_id"] != second["event_id"]  # a second knock is a new alert
+    assert len(store.list_events()) == 2
+
+
+def test_sustained_sounds_are_still_grouped(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    install(monkeypatch, [0.9, 0.05, 0.05])  # dog bark
+    first = post_detect(client, make_wav()).json()
+    ratelimit.detect_limiter.reset()
+    assert post_detect(client, make_wav()).json()["event_id"] == first["event_id"]
+    assert len(store.list_events()) == 1
+
+
+def test_detect_logs_scores_and_reason(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    store.update_sound("builtin_siren", name="Private name")
+    install(monkeypatch, [0.3, 0.55, 0.15])  # siren on top, below the 0.6 gate
+    caplog.set_level(logging.INFO, logger="hear-for-you.detectors")
+    post_detect(client, make_wav(), level_db="-30")
+    [line] = [r.getMessage() for r in caplog.records if r.getMessage().startswith("detect ")]
+    assert "builtin_top=builtin_siren:0.550,builtin_dog_bark:0.300" in line
+    assert "decision=none" in line and "reason=quiet" in line and "smoke=no" in line
+    assert "Private name" not in line
+
+
+def test_detect_log_says_grouped_and_disabled(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    install(monkeypatch, [0.9, 0.05, 0.05])
+    caplog.set_level(logging.INFO, logger="hear-for-you.detectors")
+    post_detect(client, make_wav())
+    ratelimit.detect_limiter.reset()
+    post_detect(client, make_wav())
+    store.update_sound("builtin_dog_bark", enabled=False)
+    ratelimit.detect_limiter.reset()
+    post_detect(client, make_wav(), level_db="-6")
+    lines = [r.getMessage() for r in caplog.records if r.getMessage().startswith("detect ")]
+    assert "decision=builtin:builtin_dog_bark event=new" in lines[0]
+    assert "event=grouped" in lines[1]
+    assert "reason=disabled:builtin_dog_bark" in lines[2]
+
+
+def test_detect_log_on_rate_limit(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    install(monkeypatch, [0.9, 0.05, 0.05])
+    caplog.set_level(logging.INFO, logger="hear-for-you.detectors")
+    post_detect(client, make_wav())
+    assert post_detect(client, make_wav()).status_code == 429
+    lines = [r.getMessage() for r in caplog.records if r.getMessage().startswith("detect ")]
+    assert "decision=error reason=rate_limited" in lines[1]
