@@ -8,6 +8,7 @@ import { getSounds, teachSound, updateSound, deleteSound, detectClip } from './a
 
 import { startMicrophoneListener } from './audio/listener'
 import { DetectionRetryBudget } from './api/errors'
+import { AlertPolicy } from './alert-policy'
 import type { DetectResponse } from './api/types'
 
 type Screen = 'home' | 'listen' | 'teach' | 'record' | 'history' | 'sounds' | 'account' | 'auth' | 'recognized' | 'unknown' | 'attention'
@@ -292,6 +293,7 @@ export default function App() {
   const [soundSaved, setSoundSaved] = useState(false)
   const [builtinSounds, setBuiltinSounds] = useState<GuestSound[]>(() => mergeBuiltinsWithSaved(readStoredValue<GuestSound[]>(STORAGE_KEYS.builtins, DEFAULT_BUILTIN_SOUNDS)))
   const [customSounds, setCustomSounds] = useState<GuestSound[]>(() => readStoredValue<GuestSound[]>(STORAGE_KEYS.custom, []).map(sound => ({ ...sound, enabled: false })))
+  const alertPolicy = useRef(new AlertPolicy())
   const [history, setHistory] = useState<GuestHistoryEvent[]>(() => readStoredValue<GuestHistoryEvent[]>(STORAGE_KEYS.history, []))
 
   useEffect(() => { writeStoredValue(STORAGE_KEYS.builtins, builtinSounds) }, [builtinSounds])
@@ -373,6 +375,7 @@ export default function App() {
   }
 
   return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}>{detection && screen === 'listen' && <section className={`alert-screen ${detection.kind === 'unknown' ? 'unknown' : 'recognized'}`} style={{position:'fixed',inset:0,zIndex:40}} role="alert"><div className="alert-top"><Brand/><span>Alert remains visible until dismissed</span></div><div className="alert-content"><div className="alert-icon"><Icon name={detection.kind === 'unknown' ? 'generic' : (builtinSounds.find(sound => sound.sound_id === detection.sound_id)?.icon as IconName ?? 'bell')} size={76}/></div><p className="alert-kicker">{detection.kind === 'unknown' ? 'UNKNOWN SOUND' : 'RECOGNIZED SOUND'}</p><h1>{detection.label ?? 'What was that?'}</h1><p className="alert-sub">{detection.description ?? (detection.confidence !== null ? `${Math.round(detection.confidence * 100)}% confidence` : 'A loud sound was detected.')}</p><p className="alert-note">Detected just now</p><div className="alert-actions"><button autoFocus className="alert-dismiss" onClick={() => setDetection(null)}>Dismiss alert</button></div></div></section>}{screen === 'home' ? <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} /> : screen === 'listen' ? <Listen setScreen={setScreen} builtins={builtinSounds} customSounds={customSounds} onDetection={result => {
+      if (!alertPolicy.current.accept(result, [...builtinSounds, ...customSounds], performance.now())) return
       setDetection(result)
       setHistory(current => [{ ...result, at: new Date().toISOString() }, ...current.filter(event => event.event_id !== result.event_id)])
     }} /> : screen === 'teach' ? <Teach setScreen={setScreen} done={recordings} clips={clips} message={message} saving={saving} name={name} setName={setName} selected={selected} setSelected={setSelected} saved={soundSaved} startRecording={startRecording} saveSound={saveCustomSound} deleteRecording={(index) => { setClips((current) => current.map((value, currentIndex) => currentIndex === index ? null : value)); setSoundSaved(false) }} /> : screen === 'record' ? <Recording key={recordingIndex} setScreen={setScreen} index={recordingIndex} saveRecording={saveRecording} /> : screen === 'sounds' ? <MySounds builtinSounds={builtinSounds} customSounds={customSounds} toggleBuiltin={toggleBuiltin} deleteCustom={deleteCustom} saveCustom={() => setScreen('teach')} /> : screen === 'history' ? <History events={history} /> : <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} />}</Shell></div>

@@ -72,3 +72,33 @@ also does not verify Gemini authentication. After changing `api/.env`, the backe
 owner must restart the existing backend to reload its startup settings. The
 contract exposes one explicit `/api/teach` save-and-self-check operation, not a
 separate check-only endpoint.
+
+
+## Alert relevance regression and distance checks
+
+With an isolated Chrome debugger and frontend running, execute
+`node tests/browser-alert-policy.mjs`. It uses generated onset audio and controlled
+API responses; it checks background-only speech, amplitude-only unknowns and low
+scores create neither alerts nor local History entries, while a single glass
+break and a doorbell mixed with speech create both. It does not measure acoustic
+recognition accuracy. `npm test` also checks continued-event grouping, rearming,
+enabled settings, taught voice cues, malformed scores and mixed descriptions.
+
+For real testing, use approved prerecorded audio at safe playback levels. Include
+keyboard typing, laptop taps, mouse clicks, conversation, footsteps, fans and
+ordinary household noise as negatives. Play doorbells, dog barks, microwave tones,
+smoke-alarm recordings, sirens and safe prerecorded glass breaks as positives;
+include new takes of taught sounds and each target mixed with conversation.
+Repeat at measured near, doorway and another-room positions on each target phone
+and laptop. Keep gain, playback level and settings fixed; note microphone device,
+distance, door position, room noise, sample source and repetitions. Do not induce
+real hazards or record/commit raw microphone clips.
+
+For each trial, record expected category, API result, admitted alert, time to
+alert and local History count. Count negative trials with alerts as false
+positives and positive trials without a correct alert as false negatives. Count
+wrong-category alerts separately as both a missed target and a false category.
+Repeat sustained recordings and distinct events inside/outside the grouping gap.
+Check disabled categories and subsequent re-enabling. Inspect backend History
+separately: the frontend cannot undo its pre-existing insertion on /detect.
+No house-wide or distance accuracy is established by the synthetic browser tests.
