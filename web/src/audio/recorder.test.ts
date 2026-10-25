@@ -30,6 +30,8 @@ describe('Microphone permission diagnostics', () => {
     }
 
     class FakeAudioContext {
+      addEventListener() {}
+      removeEventListener() {}
       static instances = 0;
       state = 'running';
       sampleRate = 48000;

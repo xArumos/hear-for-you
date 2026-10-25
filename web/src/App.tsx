@@ -76,13 +76,30 @@ function writeStoredValue<T>(key: string, value: T) {
 }
 
 function PlaybackControl({ label, clip }: { label:string; clip:Blob }) {
+  const audio = useRef<HTMLAudioElement|null>(null)
   const [url, setUrl] = useState('')
+  const [playing, setPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [error, setError] = useState<string|null>(null)
+  const duration = (clip.size - 44) / 32000
   useEffect(() => {
     const next = URL.createObjectURL(clip)
-    setUrl(next)
-    return () => URL.revokeObjectURL(next)
+    setUrl(next); setProgress(0); setPlaying(false)
+    return () => { audio.current?.pause(); URL.revokeObjectURL(next) }
   }, [clip])
-  return <div className="playback"><audio controls src={url} aria-label={`Play ${label}`} /></div>
+  const toggle = async () => {
+    if (!audio.current) return
+    setError(null)
+    try {
+      if (playing) audio.current.pause()
+      else { if (audio.current.ended) audio.current.currentTime = 0; await audio.current.play() }
+    } catch { setError('Playback could not start. Please retry.') }
+  }
+  return <div className="playback">
+    <audio ref={audio} src={url} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} onTimeUpdate={event => setProgress(event.currentTarget.currentTime)} onError={() => setError('The recording could not be played. Please re-record.')} />
+    <button className="play-button" onClick={() => void toggle()} aria-label={`${playing ? 'Pause' : 'Play'} ${label} recording`}>{playing ? 'Ⅱ' : '▶'}</button>
+    <div className="playback-details"><div><span>{error ?? (playing ? 'Playing recording' : 'Recording preview')}</span><time>0:{String(Math.floor(progress)).padStart(2,'0')} / 0:{String(duration).padStart(2,'0')}</time></div><div className="playback-track" role="progressbar" aria-label={`${label} playback progress`} aria-valuemin={0} aria-valuemax={duration} aria-valuenow={Math.round(progress)}><span style={{width:`${progress / duration * 100}%`}}/></div></div>
+  </div>
 }
 
 const categories: { name: string; icon: IconName }[] = [
@@ -168,7 +185,7 @@ function Listen({ setScreen, builtins, customSounds, onDetection }: { setScreen:
     </section>}
     <div className="dashboard-grid">
       <section className="card sounds-card"><div className="section-head"><div><h2>Your sounds</h2><p>Enabled sound categories and saved sounds appear here.</p></div></div>
-        {visibleSounds.length === 0 ? <div className="sounds-empty"><span className="empty-plus">+</span><h2>No active sounds yet</h2><p>Turn on a built-in sound or save a custom one to start listening.</p><button className="primary" onClick={()=>setScreen('teach')}><span aria-hidden="true">+</span> Teach a sound</button></div> : <div className="sound-list">{visibleSounds.slice(0, 6).map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon as IconName}/></span><span><strong>{sound.name}</strong><small>{!sound.enabled ? 'Disabled' : sound.kind === 'builtin' ? 'Built-in category' : 'Saved sound'}</small></span><button className="text-button" onClick={()=>setScreen('sounds')}>View</button></div>)}</div>}
+        {visibleSounds.length === 0 ? <div className="sounds-empty"><span className="empty-plus">+</span><h2>No active sounds yet</h2><p>Turn on a built-in sound or save a custom one to start listening.</p><button className="primary" onClick={()=>setScreen('teach')}><span aria-hidden="true">+</span> Teach a sound</button></div> : <div className="sound-list">{visibleSounds.map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon as IconName}/></span><span><strong>{sound.name}</strong><small>{!sound.enabled ? 'Disabled / unavailable' : sound.kind === 'builtin' ? 'Built-in category' : 'Saved sound'}</small></span><button className="text-button" onClick={()=>setScreen('sounds')}>View</button></div>)}</div>}
       </section>
       <aside className="info-card card"><span className="info-icon">i</span><h2>Private by design</h2><p>Only loud sounds are analyzed. Audio is never stored permanently in your browser session.</p><hr/><p><strong>Keep this tab visible.</strong><br/>Browsers may limit microphone access when your screen is locked or the tab is hidden.</p></aside>
     </div>
@@ -213,7 +230,7 @@ function Recording({ setScreen, index, saveRecording }: { setScreen:(s:Screen)=>
     }
   }
   const elapsed = duration - time
-  return <div className="page recording-page"><button className="back" onClick={()=>setScreen('teach')}>← Back to sound</button><p className="eyebrow">{index === 3 ? 'ROOM NOISE' : `EXAMPLE ${index + 1}`} OF 4</p><h1>{index === 3 ? 'Record room noise' : 'Record an example'}</h1><p>{index === 3 ? 'Final step: capture the normal background sound in this room.' : 'Make your sound during the 3-second recording. Review and accept this clip before continuing.'}</p>{error && <section className="card permission"><Icon name="warning" size={30}/><div><h2>Microphone unavailable</h2><p>{error}</p></div><button className="primary" onClick={() => setError(null)}>Try again</button></section>} {!error && <section className={`record-panel card ${recording?'is-recording':''}`}><div className="record-orbit"><div className="mic-core"><Icon name="voice" size={58}/></div></div><h2>{recording ? (time ? `0:${String(elapsed).padStart(2,'0')} / 0:${String(duration).padStart(2,'0')}` : 'Recording complete') : clip ? 'Recording complete' : 'Ready when you are'}</h2><div className="wave" aria-label="Recording level">{[16,30,44,60,72,52,64,38,55,66,42,30,20].map((h,i)=><i key={i} style={{height:`${h}px`}}/>)}</div>{clip&&!recording?<><PlaybackControl label="recording" clip={clip}/><button className="primary" onClick={() => clip && saveRecording(clip)}><Icon name="check"/>{index === 3 ? 'Use and return to review' : 'Use and Continue'}</button><button className="secondary" onClick={() => { setClip(null); void handleRecording() }}>Re-record</button></>:<button className="primary record-button" onClick={handleRecording}>{recording?'■ Stop recording':<><Icon name="voice"/>Start recording</>}</button>}</section>}</div>
+  return <div className="page recording-page"><button className="back" onClick={()=>setScreen('teach')}>← Back to sound</button><p className="eyebrow">{index === 3 ? 'ROOM NOISE' : `EXAMPLE ${index + 1}`} OF 4</p><h1>{index === 3 ? 'Record room noise' : 'Record an example'}</h1><p>{index === 3 ? 'Final step: capture the normal background sound in this room.' : 'Make your sound during the 3-second recording. Review and accept this clip before continuing.'}</p>{error && <section className="card permission"><Icon name="warning" size={30}/><div><h2>Recording unavailable</h2><p>{error}</p></div><button className="primary" onClick={() => setError(null)}>Try again</button></section>} {!error && <section className={`record-panel card ${recording?'is-recording':''}`}><div className="record-orbit"><div className="mic-core"><Icon name="voice" size={58}/></div></div><h2>{recording ? (time ? `0:${String(elapsed).padStart(2,'0')} / 0:${String(duration).padStart(2,'0')}` : 'Recording complete') : clip ? 'Recording complete' : 'Ready when you are'}</h2><div className="wave" aria-label="Recording level">{[16,30,44,60,72,52,64,38,55,66,42,30,20].map((h,i)=><i key={i} style={{height:`${h}px`}}/>)}</div>{clip&&!recording?<><PlaybackControl label="recording" clip={clip}/><button className="primary" onClick={() => clip && saveRecording(clip)}><Icon name="check"/>{index === 3 ? 'Use and return to review' : 'Use and Continue'}</button><button className="secondary" onClick={() => { setClip(null); void handleRecording() }}>Re-record</button></>:<button className="primary record-button" onClick={handleRecording}>{recording?'■ Stop recording':<><Icon name="voice"/>Start recording</>}</button>}</section>}</div>
 }
 
 function AuthScreen() {
@@ -277,7 +294,12 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
-    void getSounds().then(response => {
+    void getSounds().then(async response => {
+      if (cancelled) return
+      await Promise.all(response.sounds.filter(sound => sound.kind === 'builtin').map(async sound => {
+        const remembered = readStoredValue<GuestSound[]>(STORAGE_KEYS.builtins, []).find(item => item.sound_id === sound.sound_id)
+        if (remembered && remembered.enabled !== sound.enabled) await updateSound(sound.sound_id, { enabled: remembered.enabled })
+      }))
       if (cancelled) return
       backendIds.current = new Set(response.sounds.map(sound => sound.sound_id))
       setBuiltinSounds(current => mergeBuiltinsWithSaved(response.sounds.filter(sound => sound.kind === 'builtin').map(sound => ({ ...sound, enabled: current.find(item => item.sound_id === sound.sound_id)?.enabled ?? sound.enabled }))))
@@ -309,6 +331,7 @@ export default function App() {
 
   const startRecording = (index: number) => {
     setSoundSaved(false)
+    setClips(current => current.map((clip, slot) => slot === index ? null : clip))
     setRecordingIndex(index)
     setScreen('record')
   }
@@ -343,7 +366,7 @@ export default function App() {
     return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}><AuthScreen /></Shell></div>
   }
 
-  return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}>{detection && screen === 'listen' && <section className={`alert-screen ${detection.kind === 'unknown' ? 'unknown' : 'recognized'}`} role="alert"><Icon name={detection.kind === 'unknown' ? 'warning' : 'bell'} size={64}/><h1 style={{fontSize:48}}>{detection.label ?? 'What was that?'}</h1><p>{detection.description ?? (detection.confidence !== null ? `${Math.round(detection.confidence * 100)}% confidence` : 'A loud sound was detected.')}</p><button className="primary" style={{minHeight:64}} onClick={() => setDetection(null)}>Dismiss</button></section>}{screen === 'home' ? <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} /> : screen === 'listen' ? <Listen setScreen={setScreen} builtins={builtinSounds} customSounds={customSounds} onDetection={result => {
+  return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}>{detection && screen === 'listen' && <section className={`alert-screen ${detection.kind === 'unknown' ? 'unknown' : 'recognized'}`} style={{position:'fixed',inset:0,zIndex:40}} role="alert"><div className="alert-top"><Brand/><span>Alert remains visible until dismissed</span></div><div className="alert-content"><div className="alert-icon"><Icon name={detection.kind === 'unknown' ? 'generic' : (builtinSounds.find(sound => sound.sound_id === detection.sound_id)?.icon as IconName ?? 'bell')} size={76}/></div><p className="alert-kicker">{detection.kind === 'unknown' ? 'UNKNOWN SOUND' : 'RECOGNIZED SOUND'}</p><h1>{detection.label ?? 'What was that?'}</h1><p className="alert-sub">{detection.description ?? (detection.confidence !== null ? `${Math.round(detection.confidence * 100)}% confidence` : 'A loud sound was detected.')}</p><p className="alert-note">Detected just now</p><div className="alert-actions"><button autoFocus className="alert-dismiss" onClick={() => setDetection(null)}>Dismiss alert</button></div></div></section>}{screen === 'home' ? <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} /> : screen === 'listen' ? <Listen setScreen={setScreen} builtins={builtinSounds} customSounds={customSounds} onDetection={result => {
       setDetection(result)
       setHistory(current => [{ ...result, at: new Date().toISOString() }, ...current.filter(event => event.event_id !== result.event_id)])
     }} /> : screen === 'teach' ? <Teach setScreen={setScreen} done={recordings} clips={clips} message={message} saving={saving} name={name} setName={setName} selected={selected} setSelected={setSelected} saved={soundSaved} startRecording={startRecording} saveSound={saveCustomSound} deleteRecording={(index) => { setClips((current) => current.map((value, currentIndex) => currentIndex === index ? null : value)); setSoundSaved(false) }} /> : screen === 'record' ? <Recording key={recordingIndex} setScreen={setScreen} index={recordingIndex} saveRecording={saveRecording} /> : screen === 'sounds' ? <MySounds builtinSounds={builtinSounds} customSounds={customSounds} toggleBuiltin={toggleBuiltin} deleteCustom={deleteCustom} saveCustom={() => setScreen('teach')} /> : screen === 'history' ? <History events={history} /> : <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} />}</Shell></div>

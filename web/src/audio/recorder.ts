@@ -36,6 +36,7 @@ export async function openMicrophone(
   let node: AudioWorkletNode | undefined;
   let stopped = false;
   const fail = () => options.onError?.(new Error('The microphone disconnected. Reconnect it and retry.'));
+  const stateChanged = () => { if (!stopped && context?.state !== 'running') options.onError?.(new Error('Audio capture was suspended or closed. Please restart capture.')); };
   const stop = async () => {
     if (stopped) return;
     stopped = true;
@@ -43,6 +44,7 @@ export async function openMicrophone(
     if (node) { node.port.onmessage = null; node.disconnect(); }
     source?.disconnect();
     stream?.getTracks().forEach(track => { track.removeEventListener('ended', fail); track.stop(); });
+    context?.removeEventListener('statechange', stateChanged);
     if (context && context.state !== 'closed') await context.close();
   };
   const onAbort = () => { void stop(); };
@@ -64,6 +66,7 @@ export async function openMicrophone(
     source.connect(node);
     node.connect(context.destination);
     tracks.forEach(track => track.addEventListener('ended', fail));
+    context.addEventListener('statechange', stateChanged);
     options.signal?.addEventListener('abort', onAbort, { once: true });
     return { stop, sampleRate: context.sampleRate };
   } catch (error) {
