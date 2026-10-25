@@ -147,6 +147,7 @@ Multiple-event latency requires manual event-to-alert matching; candidate latenc
 Use repeated `--trial-id ORIGINAL_ID` options on the exporter to select a documented subset without cropping or altering its recordings.
 The isolated tab resets local History/settings for every source and closes afterward.
 Set `CORPUS_SCREENSHOTS=1` to save one alert screenshot per source alongside the private results.
+Use dedicated frontend/backend ports as well as a fresh database when another person is testing the app; the backend rate limiter is global.
 Backend grouping persists between trials, so the runner waits eleven seconds between sources and requires a separate database.
 Digital replay is explicitly labeled `digital_microphone_replay` and never establishes new physical-distance evidence.
 Physical capture conditions describe how the source was recorded, not the replay transport.

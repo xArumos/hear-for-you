@@ -81,6 +81,26 @@ An earlier run used a stale local `gemini-3.8-flash` override, received two HTTP
 The successful rerun changed only the test process's model environment, not saved configuration or application code.
 This recording is part of the delivered smoke collection, so this diagnostic is not a new independent held-out recognition estimate.
 
+The [isolated public regression replay report](../data/reports/public_regression_replay.json) records eight additional trials against the real frontend and backend on dedicated ports with a fresh database.
+All eight completed without HTTP or transport failures.
+The original recordings were replayed without an inserted synthetic baseline, and API responses were not mocked.
+
+| Public trial | API requests | Visible alerts | Observed outcome |
+| --- | ---: | ---: | --- |
+| Light-door knocks | 2 | 2 | Both responses classified as door knocks |
+| Electric fan | 0 | 0 | No gate submission or alert |
+| Indoor dog barking | 3 | 1 | Dog responses grouped into one event |
+| Footsteps on wood | 3 | 1 | False unknown alert described as knocking |
+| Desktop typing | 5 | 1 | False unknown alert described as knocking |
+| Group speech | 2 | 0 | No alert |
+| Finger tapping on a table | 5 | 1 | False unknown alert described as knocking |
+| Ambulance siren | 6 | 3 | Mixed siren recognition and incorrect unknown descriptions |
+
+These observations reproduce the knock-like false-alert problem motivating #28.
+They are source-specific diagnostics, not an accuracy or false-alerts/hour estimate.
+Descriptions can vary between model calls; the report preserves the actual responses rather than requiring a particular generated sentence.
+An earlier shared-backend run was excluded from this report because unrelated live activity and two rate-limit responses affected it.
+
 ## Remaining coverage and acceptance
 
 No new physical phone captures, measured across-room distances, controlled closed-door trials, or microphone comparisons were performed.
