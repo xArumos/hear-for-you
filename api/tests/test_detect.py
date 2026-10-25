@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
@@ -193,3 +195,38 @@ def test_different_sounds_are_not_grouped(client: TestClient, monkeypatch: pytes
     embed_as(monkeypatch, basis((3, 1.0)))
     assert again(client)["sound_id"] == b
     assert {e["sound_id"] for e in store.list_events()} == {a, b}
+
+
+def test_detect_log_has_taught_scores_not_names(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    sound_id = add_knock("Grandma's door")
+    embed_as(monkeypatch, basis((9, 1.0)))
+    describe_as(monkeypatch, Described(True, "A kettle whistling."))
+    caplog.set_level(logging.INFO, logger="hear-for-you.detectors")
+    post_detect(client, make_wav(), level_db="-6")
+    [line] = [r.getMessage() for r in caplog.records if r.getMessage().startswith("detect ")]
+    assert f"taught_best={sound_id}:0.000/thr=0.600" in line
+    assert "decision=unknown event=new" in line
+    assert "Grandma" not in line and "kettle" not in line
+
+
+@pytest.mark.parametrize(
+    ("described", "reason"), [(None, "describe_failed"), (Described(False, "Typing."), "background")]
+)
+def test_detect_log_says_why_unknown_was_dropped(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    described: Described | None,
+    reason: str,
+) -> None:
+    embed_as(monkeypatch, basis((9, 1.0)))
+    describe_as(monkeypatch, described)
+    caplog.set_level(logging.INFO, logger="hear-for-you.detectors")
+    post_detect(client, make_wav(), level_db="-6")
+    ratelimit.detect_limiter.reset()
+    post_detect(client, make_wav(), level_db="-6")
+    lines = [r.getMessage() for r in caplog.records if r.getMessage().startswith("detect ")]
+    assert f"reason={reason}" in lines[0]
+    assert "reason=describe_cap" in lines[1]

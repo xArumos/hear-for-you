@@ -40,10 +40,11 @@ api/
   3. Otherwise run the built-in classifier; a calibrated probability above 0.6 wins if that sound is enabled. A disabled one marks the clip as suppressed.
   4. Otherwise, if nothing was suppressed and `level_db` is above the "loud" cutoff (default −20 dBFS), call the describe model (`gemini-3.5-flash-lite`, at most 1 call per 10 s) with the clip and `RELEVANCE_PROMPT` in `gemini.py`. It returns JSON `{relevant, description}`. Return `kind: "unknown"` only if it says relevant.
   5. Otherwise `kind: "none"`: quiet, suppressed, judged background, over the describe cap, or the describe call failed. Loudness alone never makes an alert.
-- Taught, built-in and unknown results go through `ongoing.py`: the same sound detected again within `ONGOING_GAP_S` (10 s) of its last detection returns the open event's `event_id` and saves no new history row. The smoke alarm is never grouped.
+- Taught, built-in and unknown results go through `ongoing.py`: the same sound detected again within `ONGOING_GAP_S` (10 s) of its last detection returns the open event's `event_id` and saves no new history row. Discrete sounds are never grouped (`UNGROUPED`: smoke alarm, door knock, glass breaking), so a second knock is a new alert.
 - The describe prompt (`RELEVANCE_PROMPT`): one short plain sentence naming the likely source; `relevant` is false only for nothing but routine background (speech, typing, clicks, taps, footsteps, fans, hum), true if anything may need attention, even mixed with speech, and true when unsure. Keep the description under 80 characters; truncate if longer.
 - Never store audio. Store embeddings and metadata only.
 - Every response includes `latency_ms`. Log one line per request: route, status, latency, kind. No audio, no keys.
+- `/detect` also logs one `detect ...` line per clip from `detectors.py`: level, smoke-rule score, best taught score vs. its threshold and room, top two built-in probabilities, the decision, why it was `none` (`disabled:<ids>`, `quiet`, `describe_cap`, `describe_failed`, `background`, or an error code), and whether the event was `new` or `grouped`. Sound IDs and numbers only: no audio, embeddings, descriptions or sound names.
 
 ## Tests (pytest)
 

@@ -1,0 +1,15 @@
+split,cutoff,esc50_knock_accepted,esc50_knock_n,esc50_not_knock_false_knocks,esc50_not_knock_n,false_knocks,household:clapping_false_knocks,household:clapping_n,household:coughing_false_knocks,household:coughing_n,household:footsteps_false_knocks,household:footsteps_n,household:keyboard_typing_false_knocks,household:keyboard_typing_n,household:laughing_false_knocks,household:laughing_n,household:mouse_click_false_knocks,household:mouse_click_n,knocks_accepted,knocks_n,mixed_knock@+0dB_accepted,mixed_knock@+0dB_n,mixed_knock@-6dB_accepted,mixed_knock@-6dB_n,not_knock_n
+dev,0.3,32,32,2,176,16,3,31,0,30,11,31,0,31,0,31,0,31,45,96,9,32,4,32,361
+dev,0.35,32,32,2,176,16,3,31,0,30,11,31,0,31,0,31,0,31,44,96,8,32,4,32,361
+dev,0.4,32,32,2,176,15,2,31,0,30,11,31,0,31,0,31,0,31,44,96,8,32,4,32,361
+dev,0.45,32,32,1,176,12,0,31,0,30,11,31,0,31,0,31,0,31,44,96,8,32,4,32,361
+dev,0.5,32,32,1,176,10,0,31,0,30,9,31,0,31,0,31,0,31,43,96,7,32,4,32,361
+dev,0.55,30,32,1,176,7,0,31,0,30,6,31,0,31,0,31,0,31,39,96,6,32,3,32,361
+dev,0.6,29,32,0,176,5,0,31,0,30,5,31,0,31,0,31,0,31,35,96,4,32,2,32,361
+test,0.3,8,8,1,44,2,0,7,0,8,1,7,0,7,0,8,0,7,12,24,2,8,2,8,88
+test,0.35,8,8,1,44,2,0,7,0,8,1,7,0,7,0,8,0,7,12,24,2,8,2,8,88
+test,0.4,8,8,1,44,2,0,7,0,8,1,7,0,7,0,8,0,7,12,24,2,8,2,8,88
+test,0.45,8,8,1,44,2,0,7,0,8,1,7,0,7,0,8,0,7,12,24,2,8,2,8,88
+test,0.5,7,8,0,44,1,0,7,0,8,1,7,0,7,0,8,0,7,11,24,2,8,2,8,88
+test,0.55,7,8,0,44,1,0,7,0,8,1,7,0,7,0,8,0,7,10,24,1,8,2,8,88
+test,0.6,6,8,0,44,1,0,7,0,8,1,7,0,7,0,8,0,7,8,24,1,8,1,8,88
