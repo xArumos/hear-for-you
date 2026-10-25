@@ -4,10 +4,9 @@ import { explainMicrophoneError, recordMicrophoneClip } from './audio/recorder'
 import { DEFAULT_BUILTIN_SOUNDS, mergeBuiltinsWithSaved, type GuestSound } from './teach-state'
 
 import { validateWavFile } from './audio/wav'
-import { getSounds, teachSound, updateSound, deleteSound, detectClip } from './api/client'
+import { getSounds, teachSound, updateSound, deleteSound } from './api/client'
 
-import { startMicrophoneListener } from './audio/listener'
-import { DetectionRetryBudget } from './api/errors'
+import { useListening, type GlobalListening } from './hooks/useListening'
 import { AlertPolicy } from './alert-policy'
 import type { DetectResponse } from './api/types'
 
@@ -136,60 +135,19 @@ function Home({ goToTeach, goToListen }: { goToTeach: () => void; goToListen: ()
   return <div className="page home-page"><section className="home-hero"><div><p className="eyebrow">PERSONALIZED SOUND AWARENESS</p><h1>Here when it matters.<br/>Hearing what matters.</h1><h2>Stay connected to the sounds that matter.</h2><p>Hear For You helps you recognize important sounds around you through personalized detection and clear visual alerts — so you can stay aware, informed, and in control.</p><div className="hero-actions"><button className="primary" onClick={goToTeach}>Get Started</button><button className="secondary" onClick={goToListen}>Open Listen</button></div></div><aside className="hero-status card"><div className="hero-mark"><span className="brand-mark"><i/><i/><i/><i/></span></div><p>Here when it matters. Hearing what matters.</p><h2>Clear alerts. Personal sounds. More confidence in your surroundings.</h2><div className="hero-feature"><Icon name="voice"/><span><strong>Stay aware</strong><small>Visual alerts for sounds around you</small></span></div><div className="hero-feature"><Icon name="generic"/><span><strong>Make it personal</strong><small>Teach the sounds that matter to you</small></span></div><div className="hero-feature"><Icon name="warning"/><span><strong>Stay in control</strong><small>Clear labels without unnecessary alarm</small></span></div></aside></section></div>
 }
 
-function Listen({ setScreen, builtins, customSounds, onDetection }: { setScreen: (s:Screen)=>void; builtins: GuestSound[]; customSounds: GuestSound[]; onDetection:(result:DetectResponse)=>void }) {
-  const [status, setStatus] = useState<'active'|'paused'|'reconnecting'|'denied'>('paused')
-  const [error, setError] = useState<string|null>(null)
-  const controller = useRef<AbortController|null>(null)
-  const detectionRef = useRef(onDetection)
-  detectionRef.current = onDetection
-  const soundsRef = useRef([...builtins, ...customSounds])
-  soundsRef.current = [...builtins, ...customSounds]
-  const stop = () => { controller.current?.abort(); controller.current = null; setStatus('paused') }
-  useEffect(() => () => { controller.current?.abort(); controller.current = null }, [])
-  const start = async () => {
-    if (controller.current) return
-    const current = new AbortController(); controller.current = current
-    setError(null); setStatus('reconnecting')
-    let busy = false, nextRequestAt = 0
-    const retries = new DetectionRetryBudget()
-    try {
-      await startMicrophoneListener({ signal: current.signal,
-        onError: error => { if (!current.signal.aborted) { setError(explainMicrophoneError(error)); stop() } },
-        onClip: (clip, levelDb) => {
-          if (current.signal.aborted || busy || Date.now() < nextRequestAt) return
-          busy = true; nextRequestAt = Date.now() + 1000
-          void detectClip(clip, levelDb, current.signal).then(result => {
-            if (current.signal.aborted) return
-            retries.success(); setError(null)
-            if (result.kind === 'none') return
-            if (result.sound_id && !soundsRef.current.some(sound => sound.sound_id === result.sound_id && sound.enabled)) return
-            detectionRef.current(result)
-          }).catch(error => {
-            if (current.signal.aborted) return
-            const retry = retries.failure(error)
-            const message = error instanceof Error ? error.message : 'Detection request failed.'
-            if (retry.stop) { stop(); setError(`${message} Listening stopped. Resolve the backend issue, then start again.`) }
-            else { nextRequestAt = Date.now() + retry.delayMs; setError(`${message} Waiting before the next detection attempt.`) }
-          }).finally(() => { busy = false })
-        },
-      })
-      if (!current.signal.aborted) setStatus('active')
-    } catch (error) {
-      if (!current.signal.aborted) { console.error('Listen initialization failed', error); setError(explainMicrophoneError(error)); stop() }
-    }
-  }
-  const statusText = { active: 'Listening now', paused: 'Listening OFF', reconnecting: 'Starting microphone…', denied: 'Microphone access needed' }[status]
+function Listen({ setScreen, builtins, customSounds, listening }: { setScreen: (s:Screen)=>void; builtins: GuestSound[]; customSounds: GuestSound[]; listening: GlobalListening }) {
+  const { status, error, start, stop, reconnect } = listening
+  const statusText = { active: 'Listening now', paused: 'Listening OFF', reconnecting: 'Starting microphone…', teaching: 'Listening paused for recording' }[status]
   const visibleSounds = [...builtins, ...customSounds]
 
   return <div className="page listen-page">
     <div className="title-row"><div><p className="eyebrow">LIVE AWARENESS</p><h1>Listen</h1><p>Stay aware of the sounds around you.</p></div><span className={`status-pill ${status}`}><span/>{statusText}</span></div>
     {error && <section className="permission card" role="alert"><Icon name="warning"/><p>{error}</p></section>}
-    {status === 'denied' ? <section className="permission card"><Icon name="warning" size={30}/><div><h2>Allow microphone access</h2><p>Hear For You needs permission to analyze nearby sound on this device. Live microphone audio is not continuously saved.</p></div><button onClick={()=>setStatus('active')} className="primary">Try again</button></section> :
     <section className={`listener card ${status}`}>
       <div className="sound-orbit"><div className="level-ring"/><div className="mic-core"><Icon name="voice" size={52}/></div></div>
       <h2>{statusText}</h2><p className="room-level"><span className="level-bars"><i/><i/><i/><i/><i/></span>Room level: <strong>{status === 'active' ? 'Monitoring' : '—'}</strong></p>
-      <div className="listener-actions"><button className="primary" onClick={() => status === 'paused' ? void start() : stop()}><Icon name={status==='paused'?'voice':'pause'}/>{status==='paused'?'Start Listening':'Stop Listening'}</button><button className="secondary" onClick={() => { stop(); void start() }}>Reconnect</button></div>
-    </section>}
+      <div className="listener-actions"><button className="primary" onClick={() => status === 'paused' ? void start() : stop()}><Icon name={status==='paused'?'voice':'pause'}/>{status==='paused'?'Start Listening':'Stop Listening'}</button><button className="secondary" onClick={reconnect}>Reconnect</button></div>
+    </section>
     <div className="dashboard-grid">
       <section className="card sounds-card"><div className="section-head"><div><h2>Your sounds</h2><p>Enabled sound categories and saved sounds appear here.</p></div></div>
         {visibleSounds.length === 0 ? <div className="sounds-empty"><span className="empty-plus">+</span><h2>No active sounds yet</h2><p>Turn on a built-in sound or save a custom one to start listening.</p><button className="primary" onClick={()=>setScreen('teach')}><span aria-hidden="true">+</span> Teach a sound</button></div> : <div className="sound-list">{visibleSounds.map((sound) => <div className="sound-row" key={sound.sound_id}><span className="sound-icon"><Icon name={sound.icon as IconName}/></span><span><strong>{sound.name}</strong><small>{!sound.enabled ? 'Disabled / unavailable' : sound.kind === 'builtin' ? 'Built-in category' : 'Saved sound'}</small></span><button className="text-button" onClick={()=>setScreen('sounds')}>View</button></div>)}</div>}
@@ -211,7 +169,7 @@ function Teach({ setScreen, done, saved, startRecording, saveSound, deleteRecord
   </div>
 }
 
-function Recording({ setScreen, index, saveRecording }: { setScreen:(s:Screen)=>void; index:number; saveRecording:(clip:Blob)=>void }) {
+function Recording({ setScreen, index, saveRecording, record }: { setScreen:(s:Screen)=>void; index:number; saveRecording:(clip:Blob)=>void; record: GlobalListening['record'] }) {
   const duration = index === 3 ? 10 : 3
   const [time, setTime] = useState(duration)
   const [recording, setRecording] = useState(false)
@@ -225,9 +183,12 @@ function Recording({ setScreen, index, saveRecording }: { setScreen:(s:Screen)=>
     abortRef.current = controller
     setError(null); setClip(null); setRecording(true); setTime(duration)
     try {
-      const result = await recordMicrophoneClip(duration * 1000, {
-        signal: controller.signal, allowSilence: index === 3,
-        onProgress: fraction => setTime(Math.max(0, duration - Math.floor(fraction * duration))),
+      const result = await record(() => {
+        if (controller.signal.aborted) throw new DOMException('Recording cancelled', 'AbortError')
+        return recordMicrophoneClip(duration * 1000, {
+          signal: controller.signal, allowSilence: index === 3,
+          onProgress: fraction => setTime(Math.max(0, duration - Math.floor(fraction * duration))),
+        })
       })
       if (!controller.signal.aborted) setClip(result)
     } catch (error) {
@@ -295,6 +256,14 @@ export default function App() {
   const [customSounds, setCustomSounds] = useState<GuestSound[]>(() => readStoredValue<GuestSound[]>(STORAGE_KEYS.custom, []).map(sound => ({ ...sound, enabled: false })))
   const alertPolicy = useRef(new AlertPolicy())
   const [history, setHistory] = useState<GuestHistoryEvent[]>(() => readStoredValue<GuestHistoryEvent[]>(STORAGE_KEYS.history, []))
+
+  const listening = useListening(result => {
+    if (!alertPolicy.current.accept(result, [...builtinSounds, ...customSounds], performance.now())) return
+    setDetection(result)
+    setHistory(current => [{ ...result, at: new Date().toISOString() }, ...current.filter(event => event.event_id !== result.event_id)])
+  }, screen)
+  const { setTeaching } = listening
+  useEffect(() => { void setTeaching(screen === 'record') }, [screen, setTeaching])
 
   useEffect(() => { writeStoredValue(STORAGE_KEYS.builtins, builtinSounds) }, [builtinSounds])
   useEffect(() => { writeStoredValue(STORAGE_KEYS.custom, customSounds) }, [customSounds])
@@ -370,13 +339,5 @@ export default function App() {
     setScreen(next)
   }
 
-  if (screen === 'auth') {
-    return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}><AuthScreen /></Shell></div>
-  }
-
-  return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}>{detection && screen === 'listen' && <section className={`alert-screen ${detection.kind === 'unknown' ? 'unknown' : 'recognized'}`} style={{position:'fixed',inset:0,zIndex:40}} role="alert"><div className="alert-top"><Brand/><span>Alert remains visible until dismissed</span></div><div className="alert-content"><div className="alert-icon"><Icon name={detection.kind === 'unknown' ? 'generic' : (builtinSounds.find(sound => sound.sound_id === detection.sound_id)?.icon as IconName ?? 'bell')} size={76}/></div><p className="alert-kicker">{detection.kind === 'unknown' ? 'UNKNOWN SOUND' : 'RECOGNIZED SOUND'}</p><h1>{detection.label ?? 'What was that?'}</h1><p className="alert-sub">{detection.description ?? (detection.confidence !== null ? `${Math.round(detection.confidence * 100)}% confidence` : 'A loud sound was detected.')}</p><p className="alert-note">Detected just now</p><div className="alert-actions"><button autoFocus className="alert-dismiss" onClick={() => setDetection(null)}>Dismiss alert</button></div></div></section>}{screen === 'home' ? <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} /> : screen === 'listen' ? <Listen setScreen={setScreen} builtins={builtinSounds} customSounds={customSounds} onDetection={result => {
-      if (!alertPolicy.current.accept(result, [...builtinSounds, ...customSounds], performance.now())) return
-      setDetection(result)
-      setHistory(current => [{ ...result, at: new Date().toISOString() }, ...current.filter(event => event.event_id !== result.event_id)])
-    }} /> : screen === 'teach' ? <Teach setScreen={setScreen} done={recordings} clips={clips} message={message} saving={saving} name={name} setName={setName} selected={selected} setSelected={setSelected} saved={soundSaved} startRecording={startRecording} saveSound={saveCustomSound} deleteRecording={(index) => { setClips((current) => current.map((value, currentIndex) => currentIndex === index ? null : value)); setSoundSaved(false) }} /> : screen === 'record' ? <Recording key={recordingIndex} setScreen={setScreen} index={recordingIndex} saveRecording={saveRecording} /> : screen === 'sounds' ? <MySounds builtinSounds={builtinSounds} customSounds={customSounds} toggleBuiltin={toggleBuiltin} deleteCustom={deleteCustom} saveCustom={() => setScreen('teach')} /> : screen === 'history' ? <History events={history} /> : <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} />}</Shell></div>
+  return <div className={dark ? 'theme-dark' : ''}><Shell screen={screen} navigate={navigate} dark={dark} setDark={setDark}>{detection && <section className={`alert-screen ${detection.kind === 'unknown' ? 'unknown' : 'recognized'}`} style={{position:'fixed',inset:0,zIndex:40}} role="alert"><div className="alert-top"><Brand/><span>Alert remains visible until dismissed</span></div><div className="alert-content"><div className="alert-icon"><Icon name={detection.kind === 'unknown' ? 'generic' : (builtinSounds.find(sound => sound.sound_id === detection.sound_id)?.icon as IconName ?? 'bell')} size={76}/></div><p className="alert-kicker">{detection.kind === 'unknown' ? 'UNKNOWN SOUND' : 'RECOGNIZED SOUND'}</p><h1>{detection.label ?? 'What was that?'}</h1><p className="alert-sub">{detection.description ?? (detection.confidence !== null ? `${Math.round(detection.confidence * 100)}% confidence` : 'A loud sound was detected.')}</p><p className="alert-note">Detected just now</p><div className="alert-actions"><button autoFocus className="alert-dismiss" onClick={() => setDetection(null)}>Dismiss alert</button></div></div></section>}{screen === 'home' ? <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} /> : screen === 'listen' ? <Listen setScreen={setScreen} builtins={builtinSounds} customSounds={customSounds} listening={listening}  /> : screen === 'teach' ? <Teach setScreen={setScreen} done={recordings} clips={clips} message={message} saving={saving} name={name} setName={setName} selected={selected} setSelected={setSelected} saved={soundSaved} startRecording={startRecording} saveSound={saveCustomSound} deleteRecording={(index) => { setClips((current) => current.map((value, currentIndex) => currentIndex === index ? null : value)); setSoundSaved(false) }} /> : screen === 'record' ? <Recording key={recordingIndex} setScreen={setScreen} index={recordingIndex} saveRecording={saveRecording} record={listening.record} /> : screen === 'sounds' ? <MySounds builtinSounds={builtinSounds} customSounds={customSounds} toggleBuiltin={toggleBuiltin} deleteCustom={deleteCustom} saveCustom={() => setScreen('teach')} /> : screen === 'history' ? <History events={history} /> : screen === 'auth' ? <AuthScreen /> : <Home goToTeach={() => setScreen('teach')} goToListen={() => setScreen('listen')} />}</Shell></div>
 }
