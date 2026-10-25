@@ -132,7 +132,7 @@ def test_background_sound_is_none(client: TestClient, monkeypatch: pytest.Monkey
 def test_failed_describe_is_none(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     embed_as(monkeypatch, basis((9, 1.0)))  # describe_relevance hits the offline client and returns None
     body = post_detect(client, make_wav(), level_db="-12.5").json()
-    assert body["kind"] == "none"
+    assert body["kind"] == "none" and body["description"] is None
     assert store.list_events() == []
 
 
@@ -157,7 +157,7 @@ def test_describe_cap_gives_none(client: TestClient, monkeypatch: pytest.MonkeyP
     first = post_detect(client, make_wav(), level_db="-6").json()
     second = again(client, level_db="-6")
     assert first["kind"] == "unknown" and first["description"] == "A dog barking."
-    assert second["kind"] == "none"  # over the cap there is no judgement, so no alert from loudness
+    assert second["kind"] == "none" and second["description"] is None  # over the cap there is no judgement, so no alert from loudness
     assert len(calls) == 1
     assert len(store.list_events()) == 1
 
