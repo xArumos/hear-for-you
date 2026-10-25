@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ListeningSession, PENDING_CLIP_MAX_AGE_MS } from './listening-session.ts';
+import { ListeningSession, PENDING_CLIP_MAX_AGE_MS, SILENT_CLIP_DBFS } from './listening-session.ts';
 import type { CaptureSession } from './recorder.ts';
 import type { DetectResponse } from '../api/types.ts';
 import { ApiRequestError } from '../api/errors.ts';
@@ -54,6 +54,51 @@ test('OFF initially; repeated starts and page subscribers share one stream; stop
   pageTwo(); await h.session.stop();
   assert.equal(h.counts().closes, 1);
   assert.equal(new ListeningSession({ open: async () => { throw Error(); }, detect: async () => result, onDetection: () => {}, now: () => 0 }).getSnapshot().status, 'paused');
+});
+
+test('multiple silent windows keep listening active and a later sound is detected', async () => {
+  const h = setup();
+  h.session.start(); await flush();
+  h.clip(SILENT_CLIP_DBFS - 1); h.clip(-160); h.clip(Number.NEGATIVE_INFINITY); await flush();
+  assert.deepEqual(h.counts(), { opens: 1, closes: 0, calls: 0 });
+  assert.equal(h.session.getSnapshot().status, 'active');
+  assert.equal(h.session.getSnapshot().error, null);
+  assert.equal(h.results.length, 0);
+
+  h.clip(-35); await flush();
+  assert.equal(h.counts().calls, 1);
+  assert.deepEqual(h.results, [result]);
+  assert.equal(h.session.getSnapshot().status, 'active');
+  await h.session.stop();
+});
+
+test('low-volume clips above the audio-validity floor remain eligible for detection', async () => {
+  const h = setup(); h.session.start(); await flush();
+  h.clip(SILENT_CLIP_DBFS + 0.1); await flush();
+  assert.equal(h.counts().calls, 1);
+  assert.deepEqual(h.results, [result]);
+  await h.session.stop();
+});
+
+test('backend silent-audio rejection is benign but corrupted audio still stops listening', async () => {
+  const h = setup(); h.session.start(); await flush();
+  h.detect(async () => { throw new ApiRequestError('Clip is silent.', 0, 400, 'bad_audio'); });
+  h.clip(-20); await flush();
+  assert.equal(h.session.getSnapshot().status, 'active');
+  assert.equal(h.session.getSnapshot().error, null);
+  assert.equal(h.counts().closes, 0);
+  assert.equal(h.results.length, 0);
+
+  h.time(1000); h.detect(async () => result); h.clip(-20); await flush();
+  assert.deepEqual(h.results, [result]);
+  assert.equal(h.session.getSnapshot().status, 'active');
+
+  h.time(2000);
+  h.detect(async () => { throw new ApiRequestError('Not a readable WAV file.', 0, 400, 'bad_audio'); });
+  h.clip(-20); await flush();
+  assert.equal(h.session.getSnapshot().status, 'paused');
+  assert.match(h.session.getSnapshot().error!, /Not a readable WAV file/);
+  assert.equal(h.counts().closes, 1);
 });
 
 test('one request stays in flight, the newest fresh clip waits, and Stop discards it', async () => {
