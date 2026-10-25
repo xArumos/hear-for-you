@@ -78,6 +78,8 @@ cloudflared tunnel --url http://localhost:5173
 
 Open the `https://…trycloudflare.com` URL it prints on the phone. On iPhone, use Safari in the browser. Do **not** "Add to Home Screen": Wake Lock does not work there.
 
+Without a public tunnel, see `docs/PHONE_HOTSPOT.md`: HTTPS over a private hotspot, nothing on the open internet.
+
 ## 7. Data (P3 runs this once, then shares embeddings through git)
 
 ```bash
