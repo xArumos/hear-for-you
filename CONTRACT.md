@@ -29,8 +29,10 @@ Fixtures that match every response below live in `web/src/fixtures/`, so the fro
 ### `GET /api/health`
 
 ```json
-{ "ok": true, "models": { "embed": "gemini-embedding-2", "describe": "gemini-3.8-flash" } }
+{ "ok": true, "models": { "embed": "gemini-embedding-2", "describe": "gemini-3.5-flash-lite" } }
 ```
+
+`models.describe` shows the default. Health reports the configured value (`DESCRIBE_MODEL` in `api/.env`).
 
 ### `POST /api/detect`
 
@@ -50,7 +52,7 @@ Form fields: `clip` (wav, 3.0 s), `level_db` (number, the clip's peak loudness i
 
 - `kind` is one of `"builtin" | "taught" | "unknown" | "none"`.
   - `builtin` / `taught`: matched; `label`, `sound_id` and `confidence` are set. The frontend shows the Alert screen.
-  - `unknown`: loud but unmatched; `description` is a one-line string from Gemini 3.8 Flash (or `null` if the describe call failed); `label` is `null`. The frontend shows "What was that?".
+  - `unknown`: loud but unmatched; `description` is a one-line string from the describe model, Gemini 3.5 Flash-Lite by default (or `null` if the describe call failed); `label` is `null`. The frontend shows "What was that?".
   - `none`: not loud enough to describe and not matched. The frontend shows nothing.
 - `confidence` is a calibrated value in [0, 1]. Built-in sound IDs start with `builtin_`.
 - Every `detect` call that is not `none` is saved to history.

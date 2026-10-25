@@ -37,12 +37,12 @@ Apple Sound Recognition and Google Sound Notifications exist, but:
 
 ## How it works
 
-Browser mic → loudness gate (only sends audio when the level jumps) → 3 s WAV clip → our FastAPI server → Gemini Embedding 2 turns it into a vector → our detectors compare it against built-in sounds and taught sounds → alert, or Gemini 3.8 Flash describes it if it is loud and unknown.
+Browser mic → loudness gate (only sends audio when the level jumps) → 3 s WAV clip → our FastAPI server → Gemini Embedding 2 turns it into a vector → our detectors compare it against built-in sounds and taught sounds → alert, or Gemini 3.5 Flash-Lite describes it if it is loud and unknown.
 
 ## Why this counts as "fresh off the frontier"
 
 - `gemini-embedding-2` went GA on April 22, 2026. It puts audio and text in one vector space, which is what makes 3-example teaching and zero-shot matching work.
-- `gemini-3.8-flash` went GA on September 2, 2026 and describes unknown sounds.
+- `gemini-3.5-flash-lite` describes unknown sounds and judges whether they matter. We started with `gemini-3.8-flash` (GA September 2, 2026), but its free tier allows 20 calls a day and it timed out in testing (see `docs/DECISIONS.md`, Oct 24).
 
 ## What the ML is (ours, not the API's)
 

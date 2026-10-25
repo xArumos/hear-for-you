@@ -2,6 +2,6 @@
   "ok": true,
   "models": {
     "embed": "gemini-embedding-2",
-    "describe": "gemini-3.8-flash"
+    "describe": "gemini-3.5-flash-lite"
   }
 }
