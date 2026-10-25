@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+const pages=await(await fetch(`http://127.0.0.1:${process.env.BROWSER_DEBUG_PORT ?? 9223}/json/list`)).json();
+const ws=new WebSocket(pages.find(p=>p.type==='page').webSocketDebuggerUrl);await new Promise(r=>ws.onopen=r);
+let id=0;const pending=new Map();ws.onmessage=({data})=>{const m=JSON.parse(data);if(m.id){pending.get(m.id)?.(m);pending.delete(m.id)}};
+const send=(method,params={})=>new Promise(r=>{const n=++id;pending.set(n,r);ws.send(JSON.stringify({id:n,method,params}));});
+const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true,userGesture:true});if(r.result?.exceptionDetails)throw Error(JSON.stringify(r.result.exceptionDetails));return r.result?.result.value};
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const click=label=>evaluate(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===${JSON.stringify(label)}).click()`);
+await send('Page.enable');await send('Page.navigate',{url:process.env.FRONTEND_URL ?? 'http://localhost:5173'});await wait(1200);
+await evaluate(`window.tracks=[];window.contexts=[];window.detectCalls=0;window.apiFetch=window.fetch;window.fetch=async(url,init)=>{if(url==='/api/detect'){window.detectCalls++;return new Response(JSON.stringify({error:{code:'upstream_error',message:'Gemini request failed.'}}),{status:502})}return window.apiFetch(url,init)};navigator.mediaDevices.getUserMedia=async()=>{const c=new AudioContext();await c.resume();const oscillator=c.createOscillator();const gain=c.createGain();gain.gain.value=.001;const dest=c.createMediaStreamDestination();oscillator.connect(gain);gain.connect(dest);oscillator.start();window.gain=gain;window.contexts.push(c);window.tracks.push(...dest.stream.getTracks());return dest.stream}`);
+await click('Listen');await wait(100);await click('Start Listening');await wait(1800);await evaluate('window.gain.gain.value=.8');await wait(3500);
+assert.equal(await evaluate('window.detectCalls'),1);assert.match(await evaluate('document.body.innerText'),/Listening stopped/);assert.match(await evaluate('document.body.innerText'),/Listening OFF/);assert.equal(await evaluate('window.tracks.every(track=>track.readyState==="ended")'),true);assert.equal(await evaluate('!!document.querySelector(".alert-screen")'),false);
+await wait(2000);assert.equal(await evaluate('window.detectCalls'),1);
+await evaluate('Promise.all(window.contexts.map(c=>c.close()))');
+console.log('PASS permanent/opaque Gemini failure stops listening, releases microphone, produces no alert, and does not retry');ws.close();

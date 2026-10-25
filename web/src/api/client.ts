@@ -21,11 +21,10 @@ import metricsFixture from '../fixtures/metrics.json';
 import updateSoundFixture from '../fixtures/update_sound.json';
 import deleteSoundFixture from '../fixtures/delete_sound.json';
 
-const useFixtures = import.meta.env.VITE_USE_FIXTURES === '1';
+import { ApiRequestError } from './errors';
+export { ApiRequestError } from './errors';
 
-export class ApiRequestError extends Error {
-  constructor(message: string, public retryAfterMs = 0) { super(message); this.name = 'ApiRequestError'; }
-}
+const useFixtures = import.meta.env.VITE_USE_FIXTURES === '1';
 
 const fixtureMap: Record<string, unknown> = {
   '/health': healthFixture,
@@ -57,7 +56,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const errorPayload = (await response.json().catch(() => null)) as { error?: { code: string; message: string; retry_after_ms?: number } } | null;
     const message = errorPayload?.error?.message ?? 'Request failed.';
-    throw new ApiRequestError(message, errorPayload?.error?.retry_after_ms ?? 0);
+    throw new ApiRequestError(message, errorPayload?.error?.retry_after_ms ?? 0, response.status, errorPayload?.error?.code);
   }
 
   return (await response.json()) as T;

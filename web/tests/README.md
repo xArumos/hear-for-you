@@ -52,3 +52,23 @@ suite in a browser profile containing personal sound metadata.
    A phone needs the documented HTTPS tunnel; LAN HTTP cannot grant microphone
    access. Neither physical microphone/speaker behavior nor Safari is covered by
    the generated-audio Chrome regression suite.
+
+## Gemini failure regression
+
+With the same isolated Chrome debugger and frontend running, run:
+
+```sh
+node tests/browser-gemini-errors.mjs
+```
+
+This sends generated browser audio through the real onset gate and returns a
+controlled HTTP 502 upstream error. It checks that an opaque non-retryable Gemini
+failure stops listening, releases microphone tracks, produces no false alert, and
+does not keep issuing requests. Unit tests cover bounded exponential backoff,
+server retry delays, quota/authentication/model failures and recovery.
+
+These tests do not certify credentials or call Gemini. A successful `/api/health`
+also does not verify Gemini authentication. After changing `api/.env`, the backend
+owner must restart the existing backend to reload its startup settings. The
+contract exposes one explicit `/api/teach` save-and-self-check operation, not a
+separate check-only endpoint.
