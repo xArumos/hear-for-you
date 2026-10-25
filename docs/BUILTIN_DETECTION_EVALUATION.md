@@ -134,8 +134,6 @@ tradeoff. Dog recognition remained intact.
 
 ## Frontend and regression status
 
-- The per-row “Stored locally” label was removed from History. Timestamp, sound
-  name, kind, layout and `localStorage` read/write paths remain.
 - Existing tests verify disabled categories do not create new frontend alerts or
   History entries, enabled categories remain eligible, and knocks/glass/smoke need
   no frontend repetition. No preference was mutated during this evaluation.
