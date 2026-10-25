@@ -8,10 +8,13 @@ attention, alone and mixed with typing or footsteps. For each clip this records:
 
 Unlike the other eval scripts this one calls Gemini (one describe and one embed per clip), because a relevance
 judgement can't be precomputed into data/embeddings/. It paces itself under the free-tier limits and resumes
-from results/relevance_clips.csv, so a rerun only costs the clips not done yet. Needs api/.env and the ESC-50
-archive from `uv run --project ../data python ../data/download_esc50.py`.
+from results/relevance_<split>_clips.csv, so a rerun only costs the clips not done yet. Needs api/.env and the
+ESC-50 archive from `uv run --project ../data python ../data/download_esc50.py`.
 
-    uv run --project ../api python eval_relevance.py
+Two disjoint samples: "dev" (seed 42) was used to revise RELEVANCE_PROMPT; "test" (seed 43, never overlapping
+dev) is the reported number. Don't revise the prompt after looking at test.
+
+    uv run --project ../api python eval_relevance.py test
 """
 
 import csv
@@ -34,8 +37,6 @@ from app import detectors, gemini, smoke_alarm  # noqa: E402
 from convert import RATE, loudest_window  # noqa: E402
 
 RESULTS = Path(__file__).resolve().parent / "results"
-CLIPS_CSV = RESULTS / "relevance_clips.csv"
-SUMMARY_CSV = RESULTS / "relevance_summary.csv"
 MANIFEST = ROOT / "data/manifests/esc50.csv"
 
 NEGATIVE = [
@@ -48,7 +49,7 @@ POSITIVE = [
 ]
 MIX_BACKGROUNDS = ["keyboard_typing", "footsteps"]
 PER_CLASS = 5
-SEED = 42
+SEEDS = {"dev": 42, "test": 43}
 DESCRIBE_INTERVAL_S = 4.5  # describe model free tier: 15 requests per minute
 FIELDS = ["clip_id", "group", "category", "relevant", "smoke", "builtin", "alerts", "description"]
 
@@ -77,35 +78,37 @@ def to_wav(pcm: np.ndarray) -> bytes:
     return buf.getvalue()
 
 
-def choose(rows: list[dict[str, str]], used: set[str]) -> dict[str, list[str]]:
-    """PER_CLASS clips per category the built-in classifier never trained on.
+def choose(rows: list[dict[str, str]], used: set[str], split: str) -> dict[str, list[str]]:
+    """Up to PER_CLASS clips per category the built-in classifier never trained on, disjoint between splits.
 
     Clips outside data/manifests/esc50.csv where possible. The five built-in categories are all in the manifest,
-    so those come from fold 5, the classifier's held-out test fold.
+    so those come from fold 5, the classifier's held-out test fold (8 clips each: 5 dev, 3 test).
     """
-    rng = random.Random(SEED)
+    dev_rng, test_rng = random.Random(SEEDS["dev"]), random.Random(SEEDS["test"])
     chosen: dict[str, list[str]] = {}
     for category in NEGATIVE + POSITIVE:
         names = sorted(r["filename"] for r in rows if r["category"] == category and r["filename"] not in used)
         if len(names) < PER_CLASS:
             names = sorted(r["filename"] for r in rows if r["category"] == category and r["fold"] == "5")
-        chosen[category] = rng.sample(names, PER_CLASS)
+        dev = dev_rng.sample(names, PER_CLASS)
+        rest = [n for n in names if n not in dev]
+        chosen[category] = dev if split == "dev" else test_rng.sample(rest, min(PER_CLASS, len(rest)))
     return chosen
 
 
-def clips(archive: zipfile.ZipFile, prefix: str) -> list[tuple[str, str, str, np.ndarray]]:
+def clips(archive: zipfile.ZipFile, prefix: str, split: str) -> list[tuple[str, str, str, np.ndarray]]:
     """(clip_id, group, category, pcm) for every negative, positive and mixed clip."""
     with archive.open(prefix + "meta/esc50.csv") as handle:
         rows = list(csv.DictReader(io.TextIOWrapper(handle)))
     with MANIFEST.open(newline="") as handle:
         used = {Path(r["path"]).stem + ".wav" for r in csv.DictReader(handle)}
-    chosen = choose(rows, used)
+    chosen = choose(rows, used, split)
     pcm = {name: decode(archive.read(prefix + "audio/" + name)) for names in chosen.values() for name in names}
     out = [(Path(n).stem, "negative", c, pcm[n]) for c in NEGATIVE for n in chosen[c]]
     out += [(Path(n).stem, "positive", c, pcm[n]) for c in POSITIVE for n in chosen[c]]
     for i, category in enumerate(POSITIVE):
         for j, background in enumerate(MIX_BACKGROUNDS):
-            target, under = chosen[category][j], chosen[background][i % PER_CLASS]
+            target, under = chosen[category][j], chosen[background][i % len(chosen[background])]
             out.append((f"{Path(target).stem}+{Path(under).stem}", "mixed", category, mix(pcm[target], pcm[under])))
     return out
 
@@ -151,15 +154,19 @@ def summarize(rows: list[dict[str, str]]) -> list[tuple[str, float]]:
 
 
 def main() -> None:
+    split = sys.argv[1] if len(sys.argv) > 1 else "test"
+    if split not in SEEDS:
+        sys.exit(f"usage: eval_relevance.py [{'|'.join(SEEDS)}]")
+    clips_csv, summary_csv = RESULTS / f"relevance_{split}_clips.csv", RESULTS / f"relevance_{split}_summary.csv"
     [archive_path] = sorted((ROOT / "data/raw").glob("esc50-*.zip"))
     revision = archive_path.stem.removeprefix("esc50-")
     detectors.load_builtin()
     done: dict[str, dict[str, str]] = {}
-    if CLIPS_CSV.is_file():
-        with CLIPS_CSV.open(newline="") as handle:
+    if clips_csv.is_file():
+        with clips_csv.open(newline="") as handle:
             done = {r["clip_id"]: r for r in csv.DictReader(handle) if r["relevant"] != "failed"}
     with zipfile.ZipFile(archive_path) as archive:
-        todo = clips(archive, f"ESC-50-{revision}/")
+        todo = clips(archive, f"ESC-50-{revision}/", split)
     RESULTS.mkdir(exist_ok=True)
     rows: list[dict[str, str]] = []
     for clip_id, group, category, pcm in todo:
@@ -171,14 +178,14 @@ def main() -> None:
         rows.append({k: str(v) for k, v in row.items()})
         print(f"{len(rows):3}/{len(todo)} {group:8} {category:16} relevant={row['relevant']!s:6} "
               f"alerts={row['alerts']!s:5} {row['description']}", flush=True)
-        with CLIPS_CSV.open("w", newline="") as handle:  # rewrite each time, so a crash keeps progress
+        with clips_csv.open("w", newline="") as handle:  # rewrite each time, so a crash keeps progress
             writer = csv.DictWriter(handle, FIELDS)
             writer.writeheader()
             writer.writerows(rows + [r for r in done.values() if r["clip_id"] not in {x["clip_id"] for x in rows}])
         time.sleep(max(0.0, DESCRIBE_INTERVAL_S - (time.monotonic() - start)))
 
     metrics = summarize(rows)
-    with SUMMARY_CSV.open("w", newline="") as handle:
+    with summary_csv.open("w", newline="") as handle:
         writer = csv.writer(handle)
         writer.writerow(["metric", "value"])
         writer.writerows((name, round(value, 3)) for name, value in metrics)

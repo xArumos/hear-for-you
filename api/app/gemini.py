@@ -25,11 +25,14 @@ RELEVANCE_PROMPT = (
     "You help a deaf person notice sounds at home. Listen to this clip. "
     "In description, describe the sound in one short, plain sentence for someone who cannot hear it. "
     "Name the likely source. No preamble. "
+    "Listen for short or quiet sounds underneath any background noise, and describe the most important "
+    "sound, not the background. "
     "Set relevant to false only if the clip holds nothing but routine background sound: speech or "
-    "conversation, typing, mouse clicks, tapping on a laptop or desk, footsteps, fans, air conditioning, "
-    "or ordinary household hum. Set relevant to true if any sound in the clip may need attention, even "
-    "when mixed with speech or other background noise: alarms or beeping, doorbells, knocking, glass "
-    "breaking, crashes or falls, a crying baby, shouting or distress, running water, appliance chimes, "
+    "conversation, typing, mouse clicks, tapping on a laptop or desk, footsteps, breathing, eating or "
+    "drinking, brushing teeth, fans, air conditioning, ordinary household hum, or appliances such as a "
+    "vacuum cleaner or washing machine running normally. Set relevant to true if any sound in the clip may "
+    "need attention, even when mixed with speech or other background noise: alarms or beeping, doorbells, "
+    "knocking, glass breaking, crashes or falls, a crying baby, shouting or distress, appliance chimes, "
     "sirens, or a barking dog. If unsure, set relevant to true."
 )
 RELEVANCE_SCHEMA = types.Schema(

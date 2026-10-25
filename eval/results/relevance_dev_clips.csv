@@ -1,0 +1,102 @@
+clip_id,group,category,relevant,smoke,builtin,alerts,description
+1-94231-B-32,negative,keyboard_typing,False,False,,False,Routine typing sounds.
+1-53501-A-32,negative,keyboard_typing,False,False,,False,Routine clicking sound of a keyboard or mouse.
+3-132830-A-32,negative,keyboard_typing,False,False,,False,Typing sounds from a keyboard.
+2-99796-A-32,negative,keyboard_typing,False,False,,False,Someone is typing on a keyboard.
+2-99795-A-32,negative,keyboard_typing,False,False,,False,Someone is typing on a keyboard.
+2-119139-A-31,negative,mouse_click,False,False,,False,Routine background sounds of typing or clicking.
+1-97793-A-31,negative,mouse_click,False,False,,False,Routine background sounds of footsteps and movement.
+5-233019-A-31,negative,mouse_click,False,False,,False,Routine shuffling or handling sounds are heard.
+1-95563-A-31,negative,mouse_click,True,False,,True,"Knocking on a door, which may need attention."
+5-244651-A-31,negative,mouse_click,False,False,,False,A faint electronic click or beep is heard.
+4-198962-A-25,negative,footsteps,True,False,builtin_door_knock,True,Someone is knocking on a door.
+1-155858-C-25,negative,footsteps,False,False,,False,Footsteps walking on a hard surface.
+1-155858-B-25,negative,footsteps,False,False,,False,Footsteps are heard walking on a floor.
+1-155858-F-25,negative,footsteps,False,False,,False,Footsteps are heard walking on a floor.
+2-209476-A-25,negative,footsteps,True,False,,True,Someone is knocking on a door.
+2-141584-A-38,negative,clock_tick,False,False,,False,A clock ticking in the background.
+5-209698-A-38,negative,clock_tick,False,False,,False,Routine background sounds are playing.
+1-21935-A-38,negative,clock_tick,False,False,,False,A clock is ticking in the background.
+5-212181-A-38,negative,clock_tick,False,False,,False,Tapping or clicking sounds are heard from a nearby source.
+2-135728-A-38,negative,clock_tick,False,False,,False,A mechanical clock ticking.
+5-234335-A-23,negative,breathing,True,False,,True,"A person is coughing, likely due to illness or throat irritation."
+4-205526-A-23,negative,breathing,False,False,,False,Routine background sounds of heavy breathing or a fan.
+2-98392-A-23,negative,breathing,True,False,,True,"A vacuum cleaner is running, producing a loud suction noise."
+4-207116-A-23,negative,breathing,False,False,,False,A person is breathing heavily.
+5-260164-A-23,negative,breathing,True,False,builtin_siren,True,"An animal howling or barking, likely a dog."
+3-152020-C-36,negative,vacuum_cleaner,True,False,,True,A vacuum cleaner is running.
+1-100210-A-36,negative,vacuum_cleaner,False,False,,False,An electric fan or ventilation system is running in the background.
+2-122820-B-36,negative,vacuum_cleaner,True,False,,True,Water is running.
+4-172736-A-36,negative,vacuum_cleaner,True,False,,True,"Water is running loudly, likely from a faucet or shower."
+3-159347-B-36,negative,vacuum_cleaner,True,False,,True,An emergency vehicle siren is sounding.
+3-151269-A-35,negative,washing_machine,False,False,,False,An appliance or ventilation fan is humming in the background.
+2-102567-B-35,negative,washing_machine,False,False,,False,An air conditioning or ventilation fan is running in the background.
+2-121909-A-35,negative,washing_machine,False,False,,False,An engine or motor is running in the background.
+3-182710-B-35,negative,washing_machine,True,False,,True,Running water can be heard.
+1-32373-B-35,negative,washing_machine,False,False,,False,An engine or motor is running in the background.
+1-79146-A-29,negative,drinking_sipping,False,False,,False,Routine background sounds such as shifting and tapping are heard.
+4-188191-B-29,negative,drinking_sipping,True,False,,True,Running water is heard from a tap or faucet.
+1-87565-A-29,negative,drinking_sipping,False,False,,False,The clip contains routine background sound without notable events.
+3-185456-A-29,negative,drinking_sipping,False,False,,False,Someone sniffing or blowing their nose.
+5-259640-A-29,negative,drinking_sipping,False,False,,False,A person is sniffling.
+3-100024-B-27,negative,brushing_teeth,False,False,,False,Routine background sounds of scratching or rustling are present.
+1-45641-A-27,negative,brushing_teeth,False,False,,False,The sound of scratching or rustling paper is heard.
+4-172500-C-27,negative,brushing_teeth,True,False,,True,"Running water is heard, indicating a faucet or shower is on."
+5-212050-A-27,negative,brushing_teeth,False,False,,False,Routine background typing sounds are heard.
+1-68628-A-27,negative,brushing_teeth,True,False,,True,"A dog is barking, indicating a potential disturbance or someone at the door."
+5-260433-A-39,positive,glass_breaking,True,False,builtin_glass_breaking,True,A glass bottle is breaking or shattering.
+5-221528-A-39,positive,glass_breaking,True,False,builtin_glass_breaking,True,A glass breaking.
+5-257642-A-39,positive,glass_breaking,True,False,builtin_glass_breaking,True,"A loud thud or crash, possibly from an object falling."
+5-233605-A-39,positive,glass_breaking,True,False,builtin_glass_breaking,True,A glass bottle is breaking.
+5-260432-A-39,positive,glass_breaking,False,False,builtin_glass_breaking,True,Routine background sounds of typing and clicking.
+5-133989-A-42,positive,siren,True,False,builtin_siren,True,An alarm or siren is sounding.
+5-150409-A-42,positive,siren,True,False,,True,An ambulance siren is wailing.
+5-117118-A-42,positive,siren,True,False,builtin_siren,True,An emergency vehicle siren is sounding.
+5-160551-A-42,positive,siren,True,False,builtin_siren,True,An emergency vehicle siren is wailing.
+5-117120-A-42,positive,siren,True,False,builtin_siren,True,A loud alarm or siren is sounding.
+5-250026-B-30,positive,door_wood_knock,True,False,builtin_door_knock,True,Someone is knocking on a door.
+5-218980-A-30,positive,door_wood_knock,True,False,builtin_door_knock,True,Someone is knocking on a door.
+5-218981-A-30,positive,door_wood_knock,True,False,,True,A door was knocked.
+5-251426-B-30,positive,door_wood_knock,True,False,builtin_door_knock,True,Someone is knocking on a door.
+5-250026-A-30,positive,door_wood_knock,True,False,builtin_door_knock,True,Someone is knocking on a door.
+3-117883-A-37,positive,clock_alarm,True,False,,True,An alarm or beeping sound is going off.
+4-204684-A-37,positive,clock_alarm,True,False,,True,"An alarm is beeping, indicating something needs attention."
+3-148297-A-37,positive,clock_alarm,True,False,,True,An electronic alarm or beeping sound is ringing.
+2-104476-A-37,positive,clock_alarm,True,False,,True,"A smoke detector or carbon monoxide detector is beeping, indicating a…"
+3-139958-A-37,positive,clock_alarm,True,False,,True,"An alarm is ringing, indicating a potential warning or alert."
+5-198411-C-20,positive,crying_baby,True,True,builtin_crying_baby,True,"A baby crying loudly, indicating a baby needs attention."
+5-198411-E-20,positive,crying_baby,True,False,builtin_crying_baby,True,An infant is crying loudly.
+5-198411-B-20,positive,crying_baby,True,False,builtin_crying_baby,True,An infant is crying loudly.
+5-151085-A-20,positive,crying_baby,True,False,builtin_crying_baby,True,A baby is crying.
+5-198411-A-20,positive,crying_baby,True,False,builtin_crying_baby,True,An infant is crying loudly.
+5-212454-A-0,positive,dog,True,False,builtin_dog_bark,True,A dog is barking loudly.
+5-203128-B-0,positive,dog,True,False,builtin_dog_bark,True,A dog is barking loudly.
+5-9032-A-0,positive,dog,True,False,,True,A toy squeaker is being squeezed repeatedly.
+5-217158-A-0,positive,dog,True,False,builtin_dog_bark,True,A dog is barking.
+5-208030-A-0,positive,dog,True,False,builtin_dog_bark,True,A dog is barking.
+5-179868-A-43,positive,car_horn,True,False,,True,"An alarm or beeping sound is heard, possibly indicating a reminder or alert."
+2-42101-A-43,positive,car_horn,True,False,,True,An emergency vehicle siren wails in the distance.
+3-155234-A-43,positive,car_horn,True,False,,True,An ambulance siren is wailing outside.
+1-24076-A-43,positive,car_horn,True,False,,True,"A vehicle horn is honking, likely from a car outside."
+1-24074-A-43,positive,car_horn,True,False,,True,A siren is sounding outside.
+3-87936-B-46,positive,church_bells,False,False,,False,Music is playing quietly in the background.
+4-140034-A-46,positive,church_bells,True,False,,True,Church bells are chiming.
+3-122110-A-46,positive,church_bells,True,False,,True,Church bells are ringing.
+1-40154-A-46,positive,church_bells,True,False,,True,An alarm or siren is sounding.
+2-77346-A-46,positive,church_bells,True,False,,True,Church bells are ringing.
+5-260433-A-39+1-94231-B-32,mixed,glass_breaking,False,False,,False,Routine shuffling or sliding sounds are heard.
+5-221528-A-39+4-198962-A-25,mixed,glass_breaking,True,False,,True,Someone is knocking on a door.
+5-133989-A-42+1-53501-A-32,mixed,siren,True,False,,True,A fire alarm is beeping loudly.
+5-150409-A-42+1-155858-C-25,mixed,siren,False,False,,False,Footsteps are heard walking on a floor.
+5-250026-B-30+3-132830-A-32,mixed,door_wood_knock,False,False,,False,Routine background sounds including typing and desk taps.
+5-218980-A-30+1-155858-B-25,mixed,door_wood_knock,True,False,,True,Someone is knocking on a door.
+3-117883-A-37+2-99796-A-32,mixed,clock_alarm,True,False,,True,"An electronic alarm is beeping rapidly, likely indicating a timer or warning."
+4-204684-A-37+1-155858-F-25,mixed,clock_alarm,True,False,,True,An alarm or timer is beeping.
+5-198411-C-20+2-99795-A-32,mixed,crying_baby,True,False,,True,A baby is crying.
+5-198411-E-20+2-209476-A-25,mixed,crying_baby,True,False,,True,A baby is crying loudly.
+5-212454-A-0+1-94231-B-32,mixed,dog,True,False,builtin_dog_bark,True,A dog is barking.
+5-203128-B-0+4-198962-A-25,mixed,dog,True,False,builtin_dog_bark,True,A dog is barking.
+5-179868-A-43+1-53501-A-32,mixed,car_horn,True,False,,True,"A game show buzzer sounds, indicating an incorrect answer."
+2-42101-A-43+1-155858-C-25,mixed,car_horn,False,False,,False,Footsteps are walking across the floor.
+3-87936-B-46+3-132830-A-32,mixed,church_bells,False,False,,False,Routine background sounds of typing and clicking.
+4-140034-A-46+1-155858-B-25,mixed,church_bells,False,False,,False,Footsteps walking on a floor.
