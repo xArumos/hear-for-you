@@ -14,6 +14,7 @@ RATE = 16_000
 SAMPLES = 48_000
 PREPROCESS_VERSION = "pcm16-16k-mono-maxenergy-earliest-v1"
 BACKGROUND_VERSION = "pcm16-16k-mono-contiguous3s-v1"
+CORPUS_PREPROCESS_VERSION = "corpus-pcm16-16k-mono-v1"
 
 
 def loudest_start(samples: np.ndarray) -> int:

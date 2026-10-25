@@ -21,6 +21,16 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 
 ## Log
 
+### 2026-10-25 - Separate smoke training data from real-world regression evidence (P3, issues #14 and #28)
+
+The new corpora retain the seven-column embedding manifest and use versioned companion metadata for licensing, consent references, capture conditions, lineage and event timing.
+Smoke source groups stay together across folds 1-5; CO/T4 groups have no training fold.
+Regression recordings have no training folds, and source overlap is flagged before held-out claims.
+Direct captures, speaker playback, public recordings and simulations remain distinct evidence types.
+Full chronological WAVs support browser microphone replay while existing three-second windows support embeddings.
+Collection completeness is separate from artifact validity, and small-sample results do not establish reliability.
+No model, application API, threshold, dependency or existing dataset format changes are introduced.
+
 ### 2026-10-25 — Door knocks: no knock-only cutoff, no retrain; never grouped (P1, issue #27)
 
 - **Knocks and glass breaking are never grouped** (with the smoke alarm). They are discrete, so a second knock

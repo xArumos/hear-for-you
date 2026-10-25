@@ -14,6 +14,18 @@ The live five-clip test passed, its rerun required zero new embedding requests, 
 These checks establish artifact correctness, not classifier accuracy or a measured false-alarm rate.
 Local recordings have not yet been supplied; the recording tools below are ready for collection.
 
+## Smoke-alarm and real-world regression corpora
+
+Issues #14 and #28 use the provenance-aware corpus commands alongside the existing ESC-50 and local-recording tools.
+See [collection, replay and handoff instructions](../docs/CORPUS_COLLECTION.md) before collecting or publishing evidence.
+`corpus.example.json` is an intentionally incomplete input template; `source_candidates.csv` contains research candidates, not collected recordings.
+`prepare_corpus.py`, `embed_corpus.py` and `validate_dataset.py` support `smoke_alarm` and `regression` without changing the legacy seven-column manifests.
+`fetch_public_corpus.py --dataset all` restores hash-pinned public recordings from `public_corpus_sources.json` and prints the prepared generation manifests.
+The published smoke corpus contains 31 smoke windows, ten confusers and one evaluation-only CO window; the regression corpus contains 55 windows from 21 public recordings.
+Counts, replay evidence and missing physical conditions are documented in [the corpus report](../docs/CORPUS_REPORT.md).
+Preparation and replay audio remain under ignored `raw/`; only completed validated embeddings, manifests and provenance reports are publishable.
+The `all` validation mode includes both new corpora and keeps collection coverage separate from validated artifact completeness.
+
 ## Product purpose and class selection
 
 This dataset supports Hear For You's built-in classifier and its rejection of unrelated sounds as `other`.

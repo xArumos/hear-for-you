@@ -9,6 +9,7 @@ from pathlib import Path
 from dataset_io import DATA, ROOT, read_csv, sha256_file, write_json
 from embedding_core import MODEL, verify_artifacts
 from prepare_recordings import read_prepared
+from corpus import DATASETS, read_prepared as read_corpus, overlap
 
 
 def validate(dataset: str, output_dir: Path = DATA) -> dict[str, object]:
@@ -18,7 +19,9 @@ def validate(dataset: str, output_dir: Path = DATA) -> dict[str, object]:
     status_path = output_dir / f"raw/status/{dataset}.json"
     summary: dict[str, object] = {"dataset": dataset, "status": "incomplete", "model": MODEL}
     try:
-        if dataset == "recordings":
+        if dataset in DATASETS:
+            rows, companions = read_corpus(manifest, dataset)
+        elif dataset == "recordings":
             rows, companions = read_prepared(manifest)
         else:
             from embed_esc50 import read_manifest
@@ -30,12 +33,20 @@ def validate(dataset: str, output_dir: Path = DATA) -> dict[str, object]:
                         "published_matrix": matrix.is_file()})
         report = verify_artifacts(rows, manifest, matrix, report_path, companions)
         summary.update(report)
+        if dataset in DATASETS:
+            quality = json.loads(companions[1].read_text())
+            summary["collection"] = quality
+            summary["overlap"] = overlap(manifest, dataset, output_dir)
+            summary["collection_ready_for_review"] = quality["collection_target_met"] and (
+                dataset != "regression" or summary["overlap"]["held_out_eligible"])
+            summary["ready_for_issue_closure"] = False
+            summary["acceptance_required"] = "P1/P2 must review model consumption or reproduced frontend trials; artifact validity alone does not close an issue."
         if dataset == "recordings":
             quality = json.loads(companions[1].read_text())
             summary["collection"] = {key: quality[key] for key in (
                 "background_accepted_seconds", "silent_excluded_seconds", "trailing_seconds",
                 "target_deficits", "collection_target_met")}
-    except (OSError, ValueError, KeyError) as exc:
+    except (OSError, ValueError, KeyError, TypeError) as exc:
         summary["status"] = "incomplete"
         summary["reason"] = str(exc)
     write_json(status_path, summary)
@@ -45,10 +56,10 @@ def validate(dataset: str, output_dir: Path = DATA) -> dict[str, object]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dataset", choices=["esc50", "recordings", "all"], default="all")
+    parser.add_argument("--dataset", choices=["esc50", "recordings", *DATASETS, "all"], default="all")
     parser.add_argument("--output-dir", type=Path, default=DATA)
     args = parser.parse_args()
-    datasets = ["esc50", "recordings"] if args.dataset == "all" else [args.dataset]
+    datasets = ["esc50", "recordings", *DATASETS] if args.dataset == "all" else [args.dataset]
     results = [validate(dataset, args.output_dir) for dataset in datasets]
     if any(result["status"] != "complete" for result in results):
         parser.exit(1)

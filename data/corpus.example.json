@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "clip_id": "REPLACE_WITH_INDEPENDENT_TAKE_ID",
+      "path": "data/raw/ours/REPLACE_WITH_ACTUAL_FILE.wav",
+      "label": "builtin_door_knock",
+      "source_group": "REPLACE_WITH_RECORDING_SESSION_AND_ORIGINAL_SOURCE_ID",
+      "capture_kind": "direct_capture",
+      "license": "consented-private",
+      "source_url": null,
+      "author": "REPLACE_WITH_PUBLIC_COLLECTOR_ALIAS",
+      "attribution": "REPLACE_WITH_ATTRIBUTION",
+      "downloaded_at": null,
+      "consent_status": "pending",
+      "consent_ref": null,
+      "recorded_at": null,
+      "device": null,
+      "room": null,
+      "distance_m": null,
+      "position": null,
+      "door_position": null,
+      "background": null,
+      "event_variation": "REPLACE_WITH_REAL_VARIATION",
+      "alarm_pattern": null,
+      "alarm_model": null,
+      "tone_hz": null,
+      "windowing": "isolated",
+      "events": [],
+      "lineage": [],
+      "reverberant": null
+    }
+  ]
+}

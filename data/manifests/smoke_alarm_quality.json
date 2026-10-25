@@ -1,0 +1,25 @@
+{
+  "capture_kinds": {
+    "public_recording": 11
+  },
+  "collection_target_met": false,
+  "independent_groups": 11,
+  "primary_device": null,
+  "reliability_established": false,
+  "source_counts": {
+    "builtin_smoke_alarm": 5,
+    "co_alarm": 1,
+    "other": 5
+  },
+  "target_deficits": {
+    "CO_T4_evaluation": 0,
+    "T3_coverage": 1,
+    "alarm_models": 2,
+    "alarm_rooms": 2,
+    "builtin_smoke_alarm": 0,
+    "builtin_smoke_alarm_fold_groups": 0,
+    "low_frequency_coverage": 1,
+    "other": 0,
+    "other_fold_groups": 0
+  }
+}

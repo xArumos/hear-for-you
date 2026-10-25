@@ -1,0 +1,2 @@
+trial_id,evidence,capture_device,room,position,distance_m,door_position,background,source_group,expected_sound_id,expected_alert,event_at_seconds,enabled_state,api_event_ids,api_results,visible_alert_count,local_history_before,local_history_after,time_to_alert_ms,scored_background_seconds,request_failures,no_gate_request,notes
+REPLACE_WITH_SOURCE_ID,physical_trial,REPLACE_WITH_DEVICE,REPLACE_WITH_ROOM,near,,,quiet,REPLACE_WITH_GROUP,builtin_door_knock,true,,enabled,,,,,,,,,,"Template only; repeat disabled/re-enabled and inside/outside grouping gap"
