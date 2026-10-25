@@ -21,6 +21,17 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 
 ## Log
 
+### 2026-10-25 — Experiment: describe unknown sounds with local Gemma 4 (P1, branch `p1/gemma-experiment` only)
+
+- **Why:** the Open Source AI and Gemma hackathon tracks. Not merged; needs team agreement (AGENTS.md §4).
+- **Hosted Gemma can't hear:** `gemma-4-31b-it` and `gemma-4-26b-a4b-it` on the Gemini API return 400 "Audio input
+  modality is not enabled". So `DESCRIBE_MODEL=local:google/gemma-4-E4B-it` runs the audio-capable small model
+  with `transformers` (`api/app/gemma_local.py`), 4-bit on an NVIDIA GPU. Same prompt and JSON parsing as Gemini.
+- **Embeddings stay on Gemini:** no Gemma model embeds audio; changing them would break taught sounds and the
+  built-in classifier.
+- **Measured so far (laptop CPU):** E4B 34 s per clip, E2B 19 s, and both missed obvious sounds on a few clips.
+  GPU numbers and the relevance eval are still to do. Details and steps: `docs/GEMMA.md`.
+
 ### 2026-10-25 — Door knocks: no knock-only cutoff, no retrain; never grouped (P1, issue #27)
 
 - **Knocks and glass breaking are never grouped** (with the smoke alarm). They are discrete, so a second knock
@@ -170,3 +181,4 @@ Add a row for every dependency beyond the fixed stack in `AGENTS.md`.
 | pytest | api (dev only) | Runs the backend tests required by api/AGENTS.md | P1 |
 | httpx | api (dev only) | FastAPI's test client needs it | P1 |
 | scikit-learn | api, eval | Built-in classifier (fixed stack); pulls in scipy, joblib and threadpoolctl | P1 |
+| torch, torchvision, transformers, accelerate, librosa (+ bitsandbytes on GPU) | api (optional groups `gemma-cpu` / `gemma-gpu`, branch `p1/gemma-experiment` only) | Run Gemma 4 locally for the describe step; not installed by `uv sync` or CI | P1 |

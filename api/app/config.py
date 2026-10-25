@@ -29,6 +29,8 @@ class Settings:
     max_detect_per_sec: float
     max_describe_per_sec: float
     db_path: str
+    gemma_quant: str
+    gemma_gpu_memory: str
 
 
 def load_settings(path: Path = ENV_PATH) -> Settings:
@@ -41,6 +43,8 @@ def load_settings(path: Path = ENV_PATH) -> Settings:
         max_detect_per_sec=float(env.get("MAX_DETECT_PER_SEC", "1")),
         max_describe_per_sec=float(env.get("MAX_DESCRIBE_PER_SEC", "0.1")),
         db_path=env.get("DB_PATH", "./hear-for-you.db"),
+        gemma_quant=env.get("GEMMA_QUANT", "auto"),
+        gemma_gpu_memory=env.get("GEMMA_GPU_MEMORY", "10GiB"),
     )
 
 

@@ -15,6 +15,9 @@ Two disjoint samples: "dev" (seed 42) was used to revise RELEVANCE_PROMPT; "test
 dev) is the reported number. Don't revise the prompt after looking at test.
 
     uv run --project ../api python eval_relevance.py test
+
+Experimental (p1/gemma-experiment): with DESCRIBE_MODEL=local:<hf id> the describe step runs a local Gemma
+model instead, results go to relevance_<split>_gemma_*.csv, and there is no pacing.
 """
 
 import csv
@@ -157,7 +160,9 @@ def main() -> None:
     split = sys.argv[1] if len(sys.argv) > 1 else "test"
     if split not in SEEDS:
         sys.exit(f"usage: eval_relevance.py [{'|'.join(SEEDS)}]")
-    clips_csv, summary_csv = RESULTS / f"relevance_{split}_clips.csv", RESULTS / f"relevance_{split}_summary.csv"
+    local = gemini.settings.describe_model.startswith(gemini.LOCAL_PREFIX)
+    tag = f"{split}_gemma" if local else split
+    clips_csv, summary_csv = RESULTS / f"relevance_{tag}_clips.csv", RESULTS / f"relevance_{tag}_summary.csv"
     [archive_path] = sorted((ROOT / "data/raw").glob("esc50-*.zip"))
     revision = archive_path.stem.removeprefix("esc50-")
     detectors.load_builtin()
@@ -182,7 +187,9 @@ def main() -> None:
             writer = csv.DictWriter(handle, FIELDS)
             writer.writeheader()
             writer.writerows(rows + [r for r in done.values() if r["clip_id"] not in {x["clip_id"] for x in rows}])
-        time.sleep(max(0.0, DESCRIBE_INTERVAL_S - (time.monotonic() - start)))
+        print(f"    {int((time.monotonic() - start) * 1000)} ms", flush=True)
+        if not local:
+            time.sleep(max(0.0, DESCRIBE_INTERVAL_S - (time.monotonic() - start)))
 
     metrics = summarize(rows)
     with summary_csv.open("w", newline="") as handle:
