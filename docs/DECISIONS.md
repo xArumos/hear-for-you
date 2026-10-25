@@ -43,6 +43,21 @@ unless the normal backend response passes the existing alert policy. This reduce
 missed brief events without changing microphone sensitivity, backend thresholds,
 the API contract or the UI.
 
+### 2026-10-24 — Bundle the existing frontend for foreground iOS use (P2, user approved)
+
+Capacitor 8.5.3 core/CLI/iOS were already in web/package.json and its lockfile.
+Reuse those packages, React components, API client, Web Audio/WAV encoder and guest
+storage; no extra native plugin or UI framework. Add the generated iOS/SPM project
+under web/ios and keep website builds independent. The native display name
+HearAlert is explicitly requested; dev.hearforyou.app is provisional. Use an
+ignored build-time HTTPS backend origin; Capacitor's built-in HTTP fetch bridge
+supports multipart uploads without editing P1 CORS. No key goes into the bundle.
+Foreground-only capture stops on background/interruption; no background modes,
+silent audio, auto-resume or native notification claims. Native-only safe-area
+CSS preserves the website layout. Full Xcode and physical-device verification
+are outstanding; see IOS.md. This supersedes the web-only deployment choice for
+the requested iOS target, while retaining the existing website.
+
 ### 2026-10-24 — Backend decides relevance before history (P1, issue #22)
 
 - **Unknown alerts need the describe model's relevance flag.** The describe call now returns JSON
@@ -166,6 +181,9 @@ Add a row for every dependency beyond the fixed stack in `AGENTS.md`.
 
 | Package | Folder | Why | Added by |
 | --- | --- | --- | --- |
+| @capacitor/core 8.5.3 | web | Existing native bridge and HTTP support; reused for requested iOS target | P2 |
+| @capacitor/ios 8.5.3 | web | Existing WKWebView runtime / Swift package; reused | P2 |
+| @capacitor/cli 8.5.3 | web | Existing native project generation/sync tooling; reused | P2 |
 | python-multipart | api | FastAPI needs it to read uploaded audio files (`/detect`, `/teach`) | P1 |
 | pytest | api (dev only) | Runs the backend tests required by api/AGENTS.md | P1 |
 | httpx | api (dev only) | FastAPI's test client needs it | P1 |

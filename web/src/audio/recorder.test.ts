@@ -79,6 +79,8 @@ describe('Microphone permission diagnostics', () => {
       value: {
         isSecureContext: true,
         location: { hostname: 'localhost' },
+        addEventListener() {},
+        removeEventListener() {},
         setTimeout,
         clearTimeout,
       },

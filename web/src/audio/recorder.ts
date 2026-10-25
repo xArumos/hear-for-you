@@ -1,7 +1,9 @@
+import { Capacitor } from '@capacitor/core';
 import { encodeWav, resampleToSampleRate, validateWavFile } from './wav.ts';
 
 export function explainMicrophoneError(error: unknown): string {
   const name = error instanceof Error ? error.name : '';
+  if (name === 'NotAllowedError' && Capacitor.isNativePlatform()) return 'Microphone access was denied. Enable microphone access for HearAlert in iPhone Settings, then retry.';
   const messages: Record<string, string> = {
     NotAllowedError: 'Microphone permission was denied. Enable microphone access in browser site settings, then retry.',
     NotFoundError: 'No microphone was found. Connect a microphone and retry.',
@@ -24,11 +26,12 @@ export async function openMicrophone(
   onSamples: (samples: Float32Array) => void,
   options: { signal?: AbortSignal; onError?: (error: Error) => void } = {},
 ): Promise<CaptureSession> {
-  if (!window.isSecureContext) throw new Error('Microphone access requires HTTPS or localhost.');
+  if (!window.isSecureContext && !Capacitor.isNativePlatform()) throw new Error('Microphone access requires HTTPS or localhost.');
   if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined' || typeof AudioWorkletNode === 'undefined') {
     throw new Error('This browser does not support microphone AudioWorklet capture.');
   }
-  const aborted = () => { if (options.signal?.aborted) throw new DOMException('Capture cancelled', 'AbortError'); };
+  let interrupted = false;
+  const aborted = () => { if (interrupted || options.signal?.aborted) throw new DOMException('Capture cancelled', 'AbortError'); };
   aborted();
   let stream: MediaStream | undefined;
   let context: AudioContext | undefined;
@@ -41,6 +44,7 @@ export async function openMicrophone(
     if (stopped) return;
     stopped = true;
     options.signal?.removeEventListener('abort', onAbort);
+    window.removeEventListener('hear-for-you-native-inactive', inactive);
     if (node) { node.port.onmessage = null; node.disconnect(); }
     source?.disconnect();
     stream?.getTracks().forEach(track => { track.removeEventListener('ended', fail); track.stop(); });
@@ -48,7 +52,9 @@ export async function openMicrophone(
     if (context && context.state !== 'closed') await context.close();
   };
   const onAbort = () => { void stop(); };
+  const inactive = () => { interrupted = true; options.onError?.(new Error('The app was interrupted or backgrounded. Start capture again when ready.')); if (stream) void stop(); };
   try {
+    window.addEventListener('hear-for-you-native-inactive', inactive);
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     aborted();
     const tracks = stream.getAudioTracks();

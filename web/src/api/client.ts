@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+import { apiUrl } from './base-url';
 import type {
   DeleteSoundResponse,
   DetectResponse,
@@ -46,13 +48,16 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
     return fixture as T;
   }
 
-  const response = await fetch(`/api${path}`, {
+  if (init?.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
+  const response = await fetch(apiUrl(path, import.meta.env.VITE_API_BASE_URL, Capacitor.isNativePlatform()), {
     ...init,
     headers: {
       ...(init?.headers ?? {}),
     },
   });
 
+  // Native HTTP may finish an upload after JS cancellation; never admit its stale response.
+  if (init?.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
   if (!response.ok) {
     const errorPayload = (await response.json().catch(() => null)) as { error?: { code: string; message: string; retry_after_ms?: number } } | null;
     const message = errorPayload?.error?.message ?? 'Request failed.';
