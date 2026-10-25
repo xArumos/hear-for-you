@@ -4,9 +4,10 @@ import { explainMicrophoneError, recordMicrophoneClip } from './audio/recorder'
 import { DEFAULT_BUILTIN_SOUNDS, mergeBuiltinsWithSaved, type GuestSound } from './teach-state'
 
 import { validateWavFile } from './audio/wav'
-import { getSounds, teachSound, updateSound, deleteSound, detectClip, ApiRequestError } from './api/client'
+import { getSounds, teachSound, updateSound, deleteSound, detectClip } from './api/client'
 
 import { startMicrophoneListener } from './audio/listener'
+import { DetectionRetryBudget } from './api/errors'
 import type { DetectResponse } from './api/types'
 
 type Screen = 'home' | 'listen' | 'teach' | 'record' | 'history' | 'sounds' | 'account' | 'auth' | 'recognized' | 'unknown' | 'attention'
@@ -149,6 +150,7 @@ function Listen({ setScreen, builtins, customSounds, onDetection }: { setScreen:
     const current = new AbortController(); controller.current = current
     setError(null); setStatus('reconnecting')
     let busy = false, nextRequestAt = 0
+    const retries = new DetectionRetryBudget()
     try {
       await startMicrophoneListener({ signal: current.signal,
         onError: error => { if (!current.signal.aborted) { setError(explainMicrophoneError(error)); stop() } },
@@ -156,13 +158,17 @@ function Listen({ setScreen, builtins, customSounds, onDetection }: { setScreen:
           if (current.signal.aborted || busy || Date.now() < nextRequestAt) return
           busy = true; nextRequestAt = Date.now() + 1000
           void detectClip(clip, levelDb, current.signal).then(result => {
-            if (current.signal.aborted || result.kind === 'none') return
+            if (current.signal.aborted) return
+            retries.success(); setError(null)
+            if (result.kind === 'none') return
             if (result.sound_id && !soundsRef.current.some(sound => sound.sound_id === result.sound_id && sound.enabled)) return
             detectionRef.current(result)
           }).catch(error => {
             if (current.signal.aborted) return
-            if (error instanceof ApiRequestError && error.retryAfterMs) nextRequestAt = Date.now() + error.retryAfterMs
-            setError(error instanceof Error ? error.message : 'Detection failed. Retrying with the next loud sound.')
+            const retry = retries.failure(error)
+            const message = error instanceof Error ? error.message : 'Detection request failed.'
+            if (retry.stop) { stop(); setError(`${message} Listening stopped. Resolve the backend issue, then start again.`) }
+            else { nextRequestAt = Date.now() + retry.delayMs; setError(`${message} Waiting before the next detection attempt.`) }
           }).finally(() => { busy = false })
         },
       })

@@ -61,6 +61,9 @@ npm run dev
 ```
 
 Vite serves on `http://localhost:5173` and proxies `/api` to port 8000.
+Keep the backend from step 4 running in a separate terminal while using the frontend.
+`npm install` and `npm run dev` start only the frontend; Teach and Listen also need the backend.
+Each teammate must configure their own `api/.env` as described in step 3; never share or commit API keys.
 `npm run dev` refreshes Vite's optimized dependencies at startup. Stop the previous
 server before restarting; an occupied port now reports an error instead of silently
 choosing another port. For a production build, run `npm run build` followed by
