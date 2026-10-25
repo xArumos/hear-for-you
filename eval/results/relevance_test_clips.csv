@@ -1,0 +1,92 @@
+clip_id,group,category,relevant,smoke,builtin,alerts,description
+1-62594-A-32,negative,keyboard_typing,False,False,,False,Routine typing sounds from a laptop or keyboard are heard.
+4-158653-A-32,negative,keyboard_typing,False,False,,False,"Typing sounds are heard, indicating someone using a computer keyboard."
+2-118459-B-32,negative,keyboard_typing,True,False,,True,A door is knocking.
+5-223099-A-32,negative,keyboard_typing,True,False,,True,Someone is knocking on a door.
+4-181707-A-32,negative,keyboard_typing,False,False,,False,Routine background sounds of objects being shuffled or handled.
+2-146877-A-31,negative,mouse_click,True,False,,True,A microwave is chiming to signal that heating is complete.
+5-223317-A-31,negative,mouse_click,False,False,,False,Routine typing and mouse clicks are heard.
+5-237315-A-31,negative,mouse_click,False,False,,False,Tapping on a laptop or desk.
+1-18655-A-31,negative,mouse_click,False,False,,False,The clip contains routine background sounds.
+5-238926-A-31,negative,mouse_click,False,False,,False,Routine computer mouse clicking.
+5-234855-A-25,negative,footsteps,False,False,,False,Routine background sounds of footsteps and movement.
+4-198962-B-25,negative,footsteps,True,False,builtin_door_knock,True,Someone is knocking on a door.
+4-218304-B-25,negative,footsteps,True,False,,True,Footsteps are heard walking on a hard surface.
+2-209478-A-25,negative,footsteps,True,False,builtin_door_knock,True,Someone is knocking on a door.
+1-223162-A-25,negative,footsteps,False,False,,False,Routine background noises.
+1-62850-A-38,negative,clock_tick,False,False,,False,A clock is ticking softly in the background.
+2-119748-A-38,negative,clock_tick,True,False,,True,A microwave beep indicates that heating is finished.
+4-191327-A-38,negative,clock_tick,False,False,,False,The clip contains routine sounds of a person clearing their throat.
+2-131943-A-38,negative,clock_tick,False,False,,False,A clock is ticking in the background.
+2-134700-A-38,negative,clock_tick,False,False,,False,Routine clicking sounds of a Geiger counter.
+5-238492-A-23,negative,breathing,False,False,,False,Routine background breathing can be heard.
+5-235593-A-23,negative,breathing,False,False,,False,A person is breathing heavily.
+2-54961-A-23,negative,breathing,False,False,,False,Heavy breathing from a person is heard.
+4-198025-A-23,negative,breathing,False,False,,False,A person is breathing heavily.
+3-144128-A-23,negative,breathing,False,False,,False,A person is breathing heavily.
+2-141682-A-36,negative,vacuum_cleaner,False,False,,False,Traffic and vehicle noise passing by.
+4-181999-A-36,negative,vacuum_cleaner,False,False,,False,An ordinary household fan is running normally in the background.
+1-60460-A-36,negative,vacuum_cleaner,False,False,,False,An appliance or fan is running in the background.
+1-46744-A-36,negative,vacuum_cleaner,False,False,,False,The sound of an ordinary household appliance running normally.
+2-141681-B-36,negative,vacuum_cleaner,False,False,,False,An ordinary household hum or appliance running normally is heard.
+4-218199-A-35,negative,washing_machine,False,False,,False,An ordinary household appliance hums in the background.
+3-188726-A-35,negative,washing_machine,False,False,,False,An engine or motor is running in the background.
+1-27166-A-35,negative,washing_machine,True,False,,True,A vacuum cleaner is running in the background.
+5-260875-A-35,negative,washing_machine,False,False,,False,An appliance or motor is running in the background.
+1-49098-A-35,negative,washing_machine,False,False,,False,A train passes by in the background.
+1-56270-A-29,negative,drinking_sipping,False,False,,False,Routine shuffling and sliding sounds are present.
+2-102581-B-29,negative,drinking_sipping,True,False,,True,A door knocker is heard tapping.
+5-207836-B-29,negative,drinking_sipping,False,False,,False,Routine shuffling sounds.
+4-188191-C-29,negative,drinking_sipping,True,False,,True,A microwave oven has finished heating and is beeping.
+5-243635-A-29,negative,drinking_sipping,False,False,,False,The clip contains routine household sounds such as a low hum or movement.
+5-180229-A-27,negative,brushing_teeth,True,False,,True,A cat is meowing.
+2-86160-A-27,negative,brushing_teeth,False,False,,False,Ruffling of paper or packaging.
+2-83536-A-27,negative,brushing_teeth,False,False,,False,Routine background noises.
+1-67432-A-27,negative,brushing_teeth,True,False,,True,A dog is barking.
+4-144468-A-27,negative,brushing_teeth,False,False,,False,Routine background sounds of typing and desk activity.
+5-221529-A-39,positive,glass_breaking,False,False,builtin_glass_breaking,True,A book was flipped or handled.
+5-233607-A-39,positive,glass_breaking,True,False,builtin_glass_breaking,True,A glass breaking or shattering sound.
+5-260434-A-39,positive,glass_breaking,True,False,builtin_glass_breaking,True,Someone is knocking on a door.
+5-184323-A-42,positive,siren,True,False,builtin_siren,True,An ambulance siren is wailing.
+5-117122-A-42,positive,siren,True,False,,True,An emergency siren is blaring.
+5-133989-B-42,positive,siren,True,False,builtin_siren,True,An emergency siren is sounding.
+5-256512-A-30,positive,door_wood_knock,True,False,builtin_door_knock,True,Someone is knocking on a door.
+5-235644-A-30,positive,door_wood_knock,True,False,builtin_door_knock,True,Someone is knocking on the door.
+5-251426-A-30,positive,door_wood_knock,True,False,builtin_door_knock,True,Someone is knocking on a door.
+5-223176-A-37,positive,clock_alarm,True,False,,True,An alarm is beeping.
+4-189332-A-37,positive,clock_alarm,True,False,,True,A smoke detector or alarm is beeping.
+5-210612-A-37,positive,clock_alarm,True,False,,True,An electronic alarm is beeping.
+1-34853-A-37,positive,clock_alarm,True,False,,True,An alarm is beeping.
+5-219242-B-37,positive,clock_alarm,True,False,,True,An alarm or buzzer is beeping.
+5-198411-F-20,positive,crying_baby,True,False,,True,A baby is crying.
+5-198411-D-20,positive,crying_baby,True,False,builtin_crying_baby,True,A baby is crying.
+5-198411-G-20,positive,crying_baby,True,False,builtin_crying_baby,True,A baby is crying.
+5-203128-A-0,positive,dog,True,False,builtin_dog_bark,True,A dog barking.
+5-231762-A-0,positive,dog,True,False,builtin_dog_bark,True,A dog is barking loudly.
+5-213855-A-0,positive,dog,True,False,builtin_dog_bark,True,A dog is barking.
+3-243726-A-43,positive,car_horn,False,False,,False,Routine background hum of traffic.
+2-100648-A-43,positive,car_horn,True,False,,True,An ambulance siren is wailing.
+5-179860-A-43,positive,car_horn,False,False,,False,Routine background sounds are present with no significant events.
+5-179863-A-43,positive,car_horn,True,False,,True,A car horn honking.
+1-254507-A-43,positive,car_horn,True,False,,True,An emergency vehicle siren is sounding.
+2-59565-A-46,positive,church_bells,True,False,,True,Church bells are ringing.
+1-13571-A-46,positive,church_bells,True,False,builtin_siren,True,Church bells are ringing.
+1-56907-A-46,positive,church_bells,True,False,,True,Church bells are ringing.
+2-56926-A-46,positive,church_bells,True,False,,True,Church bells are ringing.
+2-57191-A-46,positive,church_bells,True,False,,True,Church bells are ringing.
+5-221529-A-39+1-62594-A-32,mixed,glass_breaking,True,False,,True,A knock on a door or surface.
+5-233607-A-39+5-234855-A-25,mixed,glass_breaking,True,False,,True,A door is knocking.
+5-184323-A-42+4-158653-A-32,mixed,siren,True,False,,True,An alarm or timer is beeping.
+5-117122-A-42+4-198962-B-25,mixed,siren,True,False,,True,An emergency siren is sounding.
+5-256512-A-30+2-118459-B-32,mixed,door_wood_knock,True,False,,True,A door is being knocked on.
+5-235644-A-30+4-218304-B-25,mixed,door_wood_knock,True,False,builtin_door_knock,True,Someone is knocking on the door.
+5-223176-A-37+5-223099-A-32,mixed,clock_alarm,True,False,,True,An electronic alarm or timer is beeping.
+4-189332-A-37+2-209478-A-25,mixed,clock_alarm,True,False,,True,A microwave or oven timer is beeping.
+5-198411-F-20+4-181707-A-32,mixed,crying_baby,True,False,,True,A cat meowing.
+5-198411-D-20+1-223162-A-25,mixed,crying_baby,True,False,,True,A baby is crying.
+5-203128-A-0+1-62594-A-32,mixed,dog,True,False,builtin_dog_bark,True,A dog is barking.
+5-231762-A-0+5-234855-A-25,mixed,dog,True,False,,True,A dog is barking.
+3-243726-A-43+4-158653-A-32,mixed,car_horn,False,False,,False,Routine background hum of an appliance running.
+2-100648-A-43+4-198962-B-25,mixed,car_horn,True,False,,True,"A microwave oven chime is sounding, indicating that heating is complete."
+2-59565-A-46+2-118459-B-32,mixed,church_bells,True,False,,True,A bell is ringing
+1-13571-A-46+4-218304-B-25,mixed,church_bells,True,False,,True,Church bells are ringing.

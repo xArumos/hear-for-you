@@ -66,6 +66,7 @@ class TaughtModel:
     prototype: np.ndarray  # (EMBED_DIM,), unit length
     room: np.ndarray  # (n_room, EMBED_DIM), each row unit length
     threshold: float
+    enabled: bool = True
 
 
 def parse_time(value: str) -> str:
@@ -238,17 +239,20 @@ def delete_sound(sound_id: str, db_path: str | None = None) -> None:
         conn.execute("DELETE FROM sounds WHERE sound_id = ?", (sound_id,))
 
 
-def taught_models(db_path: str | None = None) -> list[TaughtModel]:
-    """Every enabled taught sound with its vectors, for the detectors."""
+def taught_models(db_path: str | None = None, *, include_disabled: bool = False) -> list[TaughtModel]:
+    """Every enabled taught sound with its vectors, for the detectors; disabled ones too if asked."""
+    min_enabled = 0 if include_disabled else 1
     with _connect(db_path) as conn:
         sounds = conn.execute(
-            "SELECT sound_id, name, threshold FROM sounds"
-            " WHERE kind = 'taught' AND enabled = 1 ORDER BY created_at, rowid"
+            "SELECT sound_id, name, threshold, enabled FROM sounds"
+            " WHERE kind = 'taught' AND enabled >= ? ORDER BY created_at, rowid",
+            (min_enabled,),
         ).fetchall()
         vectors = conn.execute(
             "SELECT v.sound_id, v.role, v.vector FROM vectors v"
             " JOIN sounds s ON s.sound_id = v.sound_id"
-            " WHERE s.kind = 'taught' AND s.enabled = 1 ORDER BY v.sound_id, v.role, v.idx"
+            " WHERE s.kind = 'taught' AND s.enabled >= ? ORDER BY v.sound_id, v.role, v.idx",
+            (min_enabled,),
         ).fetchall()
     protos: dict[str, np.ndarray] = {}
     rooms: dict[str, list[np.ndarray]] = {row["sound_id"]: [] for row in sounds}
@@ -266,6 +270,7 @@ def taught_models(db_path: str | None = None) -> list[TaughtModel]:
             prototype=protos[row["sound_id"]],
             room=np.stack(rooms[row["sound_id"]]) if rooms[row["sound_id"]] else empty_room,
             threshold=float(row["threshold"]),
+            enabled=bool(row["enabled"]),
         )
         for row in sounds
     ]

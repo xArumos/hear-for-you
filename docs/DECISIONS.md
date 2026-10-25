@@ -15,9 +15,23 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 | Describe cap | 1 call per 10 s | At most 6 describe calls a minute (12 with retries), under 3.5 Flash-Lite's 15 RPM | `MAX_DESCRIBE_PER_SEC` |
 | Gemini timeout / retries | 10 s / 1 retry on 429 or 5xx | Fail fast during a live demo | `api/` |
 | Smoke-alarm rule | Beeps 0.3–0.8 s, gaps 0.3–0.8 s or 1.1–2.2 s, tone ≥ 40% of frame energy, ±5% steady | Tolerant T3 timing for phone mics and echo; tune with real recordings (#14) | `api/app/smoke_alarm.py` |
+| Ongoing-event gap | 10 s | Notification grouping, not an ML threshold: the same sound detected again within 10 s of its last detection is one history event (smoke alarm excluded). Matches P2's frontend grouping | `ONGOING_GAP_S` in `api/app/ongoing.py` |
 | Taught threshold mix | 0.5 (midpoint) | Threshold sits halfway between the room's best score and cos(example 1, example 2); tune with eval | `THRESHOLD_MIX` in `api/app/teach.py` |
 
 ## Log
+
+### 2026-10-24 — Backend decides relevance before history (P1, issue #22)
+
+- **Unknown alerts need the describe model's relevance flag.** The describe call now returns JSON
+  `{relevant, description}` (same model, structured output). A loud clip that is only background, that the model
+  can't judge (call failed, over the describe cap), or that matched a disabled sound is `none` and is not saved.
+  Before, loudness alone made an `unknown` event. The flag is model judgement, not a calibrated confidence. The
+  prompt says "relevant if unsure" so a missed alarm is less likely than a stray alert.
+- **Disabled sounds are suppressed, not relabelled.** A disabled smoke alarm, built-in or taught match makes the
+  clip `none`, but an enabled sound in the same clip still wins. Re-enabling works on the next clip.
+- **Ongoing sounds are one history event.** See `ONGOING_GAP_S`. The repeat returns the open `event_id`, which
+  the frontend already ignores, so alerts and history agree. The smoke alarm is never grouped so it keeps alerting.
+- Measured on held-out ESC-50 clips by `eval/eval_relevance.py`; numbers in `docs/MODEL_CARD.md`.
 
 ### 2026-10-24 — Conservative frontend alert relevance and grouping (P2)
 

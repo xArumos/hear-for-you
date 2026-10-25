@@ -11,6 +11,7 @@ eval/
   few_shot.py          # personal detector: leave-one-out threshold tuning, miss rate
   false_alarms.py      # runs 60 min of background embeddings through the detectors
   latency.py           # parses timed logs from the integration run
+  eval_relevance.py    # unknown-gate and pipeline false positives / misses on held-out ESC-50 clips
   write_metrics.py     # combines results → api/metrics.json (shape in CONTRACT.md)
   results/             # CSV outputs (committed)
   notebooks/           # optional exploration; scripts are the source of truth
@@ -18,7 +19,7 @@ eval/
 
 ## Rules
 
-- Inputs are the committed embeddings in `data/embeddings/` and manifests in `data/manifests/`. Never call Gemini from eval scripts; `data/` scripts do the embedding.
+- Inputs are the committed embeddings in `data/embeddings/` and manifests in `data/manifests/`. Never call Gemini from eval scripts; `data/` scripts do the embedding. One exception: `eval_relevance.py` calls the describe model (and embeds the same clips), because a relevance judgement can't be precomputed. It paces itself under the free-tier limits and resumes from its results file.
 - ESC-50: train on folds 1–4, test on fold 5. Never tune on fold 5.
 - Built-in classes map from ESC-50 as listed in `data/README.md`; everything else is "other".
 - Calibrate built-in probabilities on a held-out slice of the training folds (scikit-learn `CalibratedClassifierCV`).
@@ -38,5 +39,6 @@ uv run --project ../api python train_builtin.py
 uv run --project ../api python zero_shot.py
 uv run --project ../api python few_shot.py
 uv run --project ../api python false_alarms.py
+uv run --project ../api python eval_relevance.py   # calls Gemini: ~100 describe + ~100 embed calls
 uv run --project ../api python write_metrics.py
 ```

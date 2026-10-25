@@ -111,31 +111,51 @@ def text_response(text: str) -> types.GenerateContentResponse:
     )
 
 
-def test_describe_sends_prompt_and_audio(monkeypatch: pytest.MonkeyPatch) -> None:
-    models = install_fake(monkeypatch, [lambda: text_response(" A dog barking outside.\n")])
-    assert gemini.describe_audio(b"wav") == "A dog barking outside."
+def test_describe_sends_prompt_audio_and_schema(monkeypatch: pytest.MonkeyPatch) -> None:
+    reply = '{"relevant": true, "description": " A dog barking outside.\\n"}'
+    models = install_fake(monkeypatch, [lambda: text_response(reply)])
+    assert gemini.describe_relevance(b"wav") == gemini.Described(True, "A dog barking outside.")
     call = models.calls[0]
     assert call["model"] == settings.describe_model
     prompt, part = call["contents"]  # type: ignore[misc]
-    assert prompt == gemini.DESCRIBE_PROMPT
+    assert prompt == gemini.RELEVANCE_PROMPT
     assert part.inline_data.mime_type == "audio/wav" and part.inline_data.data == b"wav"
+    config = call["config"]
+    assert config.response_mime_type == "application/json"  # type: ignore[attr-defined]
+    assert config.response_schema == gemini.RELEVANCE_SCHEMA  # type: ignore[attr-defined]
+
+
+def test_describe_background(monkeypatch: pytest.MonkeyPatch) -> None:
+    reply = '{"relevant": false, "description": "Someone typing on a keyboard."}'
+    install_fake(monkeypatch, [lambda: text_response(reply)])
+    assert gemini.describe_relevance(b"wav") == gemini.Described(False, "Someone typing on a keyboard.")
 
 
 def test_describe_truncates_long_text(monkeypatch: pytest.MonkeyPatch) -> None:
     long = "A very loud metal pot falling onto a hard kitchen floor and bouncing several times"
-    install_fake(monkeypatch, [lambda: text_response(long)])
-    text = gemini.describe_audio(b"wav")
-    assert text is not None and len(text) < 80 and text.endswith("…")
-    assert text.startswith("A very loud metal pot")
+    install_fake(monkeypatch, [lambda: text_response(f'{{"relevant": true, "description": "{long}"}}')])
+    described = gemini.describe_relevance(b"wav")
+    assert described is not None
+    assert len(described.description) < 80 and described.description.endswith("…")
+    assert described.description.startswith("A very loud metal pot")
 
 
 @pytest.mark.parametrize(
     "outcomes",
-    [[raises(api_error(429)), raises(api_error(429))], [raises(api_error(400))], [lambda: text_response("  ")]],
-    ids=["rate_limited", "bad_request", "empty"],
+    [
+        [raises(api_error(429)), raises(api_error(429))],
+        [raises(api_error(400))],
+        [lambda: text_response("  ")],
+        [lambda: text_response("A dog barking.")],
+        [lambda: text_response('{"description": "A dog barking."}')],
+        [lambda: text_response('{"relevant": "yes", "description": "A dog barking."}')],
+        [lambda: text_response('{"relevant": true, "description": " "}')],
+        [lambda: text_response("[true]")],
+    ],
+    ids=["rate_limited", "bad_request", "empty", "not_json", "no_flag", "flag_not_bool", "blank", "not_object"],
 )
 def test_describe_failure_returns_none(
     monkeypatch: pytest.MonkeyPatch, outcomes: list[Callable[[], object]]
 ) -> None:
     install_fake(monkeypatch, outcomes)
-    assert gemini.describe_audio(b"wav") is None
+    assert gemini.describe_relevance(b"wav") is None

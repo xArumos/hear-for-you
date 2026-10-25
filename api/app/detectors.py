@@ -1,7 +1,8 @@
 """Detectors. The taught-sound match rule lives here so /teach's self-check and /detect agree.
 
 /detect decision order (api/AGENTS.md): smoke-alarm rule -> taught match -> built-in classifier
--> loud unknown -> none.
+-> loud unknown judged relevant -> none. A disabled sound that matches makes the clip "none" instead of
+"unknown", unless an enabled sound also matches.
 """
 
 import logging
@@ -13,7 +14,7 @@ import joblib
 import numpy as np
 import sklearn
 
-from app import gemini, ratelimit, smoke_alarm, store
+from app import gemini, ongoing, ratelimit, smoke_alarm, store
 from app.config import settings
 
 log = logging.getLogger("hear-for-you.detectors")
@@ -71,7 +72,7 @@ def taught_confidence(result: TaughtScore) -> float:
 def match_taught(
     vec: np.ndarray, models: list[store.TaughtModel]
 ) -> tuple[store.TaughtModel, TaughtScore] | None:
-    """The enabled taught sound with the highest score among those that match, if any."""
+    """The taught sound with the highest score among those that match, if any."""
     best: tuple[store.TaughtModel, TaughtScore] | None = None
     for model in models:
         result = score_taught(vec, model.prototype, model.room, model.threshold)
@@ -113,40 +114,17 @@ def match_builtin(vec: np.ndarray) -> tuple[str, float] | None:
     return label, p
 
 
-def detect(wav: bytes, samples: np.ndarray, level_db: float) -> dict[str, object]:
-    """Run one validated clip through the detectors. Saves every result except "none" to history.
+def _admit(
+    kind: str, label: str | None, sound_id: str | None, confidence: float | None, description: str | None
+) -> dict[str, object]:
+    """Save a new history event, or return the open one if this sound is still ongoing."""
+    def save() -> dict[str, object]:
+        return store.add_event(kind, label, sound_id, confidence, description)
 
-    The smoke-alarm rule runs first, on the raw samples: no embedding, so it is never rate-limited and
-    still works when Gemini is down. Everything after it costs a Gemini call and is rate-limited.
-    """
-    alarm = smoke_alarm.detect(samples)
-    if alarm.detected:
-        sound = store.get_sound(SMOKE_ALARM_ID)
-        if sound["enabled"]:
-            return store.add_event("builtin", str(sound["name"]), SMOKE_ALARM_ID, alarm.score, None)
+    return ongoing.events.admit(sound_id or "unknown", confidence, save)
 
-    ratelimit.detect_limiter.check()
-    vec = gemini.embed_audio(wav)
 
-    match = match_taught(vec, store.taught_models())
-    if match is not None:
-        model, result = match
-        return store.add_event(
-            "taught", model.name, model.sound_id, taught_confidence(result), None
-        )
-
-    builtin = match_builtin(vec)
-    if builtin is not None:
-        sound_id, p = builtin
-        sound = store.get_sound(sound_id)
-        if sound["enabled"]:
-            return store.add_event("builtin", str(sound["name"]), sound_id, round(p, 2), None)
-
-    if level_db > LOUD_DBFS:
-        # Over the describe cap the sound is still "unknown", just without a description.
-        description = gemini.describe_audio(wav) if ratelimit.describe_limiter.allow() else None
-        return store.add_event("unknown", None, None, None, description)
-
+def _none() -> dict[str, object]:
     return {
         "event_id": store.new_id("evt"),
         "kind": "none",
@@ -155,3 +133,46 @@ def detect(wav: bytes, samples: np.ndarray, level_db: float) -> dict[str, object
         "confidence": None,
         "description": None,
     }
+
+
+def detect(wav: bytes, samples: np.ndarray, level_db: float) -> dict[str, object]:
+    """Run one validated clip through the detectors. Saves new non-"none" events to history.
+
+    The smoke-alarm rule runs first, on the raw samples: no embedding, so it is never rate-limited and
+    still works when Gemini is down. It is never grouped, so a sounding alarm keeps alerting. Everything
+    after it costs a Gemini call and is rate-limited.
+    """
+    suppressed = False  # a disabled sound matched: never relabel the clip as unknown
+    alarm = smoke_alarm.detect(samples)
+    if alarm.detected:
+        sound = store.get_sound(SMOKE_ALARM_ID)
+        if sound["enabled"]:
+            return store.add_event("builtin", str(sound["name"]), SMOKE_ALARM_ID, alarm.score, None)
+        suppressed = True  # keep going: an enabled sound may be sounding at the same time
+
+    ratelimit.detect_limiter.check()
+    vec = gemini.embed_audio(wav)
+
+    models = store.taught_models(include_disabled=True)
+    match = match_taught(vec, [m for m in models if m.enabled])
+    if match is not None:
+        model, result = match
+        return _admit("taught", model.name, model.sound_id, taught_confidence(result), None)
+    if match_taught(vec, [m for m in models if not m.enabled]) is not None:
+        suppressed = True
+
+    builtin = match_builtin(vec)
+    if builtin is not None:
+        sound_id, p = builtin
+        sound = store.get_sound(sound_id)
+        if sound["enabled"]:
+            return _admit("builtin", str(sound["name"]), sound_id, round(p, 2), None)
+        suppressed = True
+
+    if suppressed or level_db <= LOUD_DBFS or not ratelimit.describe_limiter.allow():
+        return _none()
+    # Loudness alone never makes an alert: the describe model must judge the sound relevant.
+    described = gemini.describe_relevance(wav)
+    if described is None or not described.relevant:
+        return _none()
+    return _admit("unknown", None, None, None, described.description)

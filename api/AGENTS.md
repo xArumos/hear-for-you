@@ -34,13 +34,14 @@ api/
 - Validate audio before any Gemini call. A bad clip returns 400 `bad_audio` and costs no API call.
 - Enforce `MAX_DETECT_PER_SEC` server-side; over the cap returns 429 with `retry_after_ms`. The smoke-alarm check runs before the cap (it costs no API call).
 - `/detect` decision order:
-  0. Smoke-alarm rule on the raw audio (T3 pattern, `smoke_alarm.py`). A match returns `builtin_smoke_alarm` with no Gemini call.
+  0. Smoke-alarm rule on the raw audio (T3 pattern, `smoke_alarm.py`). A match returns `builtin_smoke_alarm` with no Gemini call. If the alarm is disabled, remember that and keep going.
   1. Embed the clip.
-  2. Score every enabled taught sound (cosine to its prototype vs. to its room vectors). A match above its threshold wins.
-  3. Otherwise run the built-in classifier; a calibrated probability above 0.6 wins.
-  4. Otherwise, if `level_db` is above the "loud" cutoff (default −20 dBFS), call the describe model (`gemini-3.5-flash-lite`, at most 1 call per 10 s) with the clip and the prompt in `gemini.py`, and return `kind: "unknown"`.
-  5. Otherwise `kind: "none"`.
-- The describe prompt: *"Describe this sound in one short, plain sentence for someone who cannot hear it. Name the likely source. No preamble."* Keep the output under 80 characters; truncate if longer.
+  2. Score every taught sound (cosine to its prototype vs. to its room vectors). The best enabled match above its threshold wins. A match on a disabled one only marks the clip as suppressed.
+  3. Otherwise run the built-in classifier; a calibrated probability above 0.6 wins if that sound is enabled. A disabled one marks the clip as suppressed.
+  4. Otherwise, if nothing was suppressed and `level_db` is above the "loud" cutoff (default −20 dBFS), call the describe model (`gemini-3.5-flash-lite`, at most 1 call per 10 s) with the clip and `RELEVANCE_PROMPT` in `gemini.py`. It returns JSON `{relevant, description}`. Return `kind: "unknown"` only if it says relevant.
+  5. Otherwise `kind: "none"`: quiet, suppressed, judged background, over the describe cap, or the describe call failed. Loudness alone never makes an alert.
+- Taught, built-in and unknown results go through `ongoing.py`: the same sound detected again within `ONGOING_GAP_S` (10 s) of its last detection returns the open event's `event_id` and saves no new history row. The smoke alarm is never grouped.
+- The describe prompt (`RELEVANCE_PROMPT`): one short plain sentence naming the likely source; `relevant` is false only for nothing but routine background (speech, typing, clicks, taps, footsteps, fans, hum), true if anything may need attention, even mixed with speech, and true when unsure. Keep the description under 80 characters; truncate if longer.
 - Never store audio. Store embeddings and metadata only.
 - Every response includes `latency_ms`. Log one line per request: route, status, latency, kind. No audio, no keys.
 
