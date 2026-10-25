@@ -171,7 +171,7 @@ def detect(wav: bytes, samples: np.ndarray, level_db: float) -> dict[str, object
     Logs one "detect ..." line per clip with the scores and the reason for the decision: sound IDs and
     numbers only, never audio, embeddings, descriptions or sound names.
     """
-    trace: Trace = {"level_db": round(level_db, 1)}
+    trace: Trace = {"level_db": f"{level_db:.1f}"}
     try:
         return _detect(wav, samples, level_db, trace)
     except ApiError as exc:

@@ -1,0 +1,85 @@
+variant,split,group,correct,n
+shipped recipe,dev,esc50:builtin_crying_baby,32,32
+shipped recipe,dev,esc50:builtin_dog_bark,31,32
+shipped recipe,dev,esc50:builtin_door_knock,29,32
+shipped recipe,dev,esc50:builtin_glass_breaking,29,32
+shipped recipe,dev,esc50:builtin_siren,24,32
+shipped recipe,dev,esc50:other,45,48
+shipped recipe,dev,household:clapping,31,31
+shipped recipe,dev,household:coughing,30,30
+shipped recipe,dev,household:footsteps,27,31
+shipped recipe,dev,household:keyboard_typing,31,31
+shipped recipe,dev,household:laughing,30,31
+shipped recipe,dev,household:mouse_click,31,31
+shipped recipe,dev,mixed_knock@+0dB,4,32
+shipped recipe,dev,mixed_knock@-6dB,2,32
+shipped recipe,test,esc50:builtin_crying_baby,6,8
+shipped recipe,test,esc50:builtin_dog_bark,7,8
+shipped recipe,test,esc50:builtin_door_knock,6,8
+shipped recipe,test,esc50:builtin_glass_breaking,8,8
+shipped recipe,test,esc50:builtin_siren,6,8
+shipped recipe,test,esc50:other,12,12
+shipped recipe,test,household:clapping,7,7
+shipped recipe,test,household:coughing,8,8
+shipped recipe,test,household:footsteps,6,7
+shipped recipe,test,household:keyboard_typing,7,7
+shipped recipe,test,household:laughing,6,8
+shipped recipe,test,household:mouse_click,7,7
+shipped recipe,test,mixed_knock@+0dB,1,8
+shipped recipe,test,mixed_knock@-6dB,1,8
++household,dev,esc50:builtin_crying_baby,30,32
++household,dev,esc50:builtin_dog_bark,31,32
++household,dev,esc50:builtin_door_knock,24,32
++household,dev,esc50:builtin_glass_breaking,27,32
++household,dev,esc50:builtin_siren,28,32
++household,dev,esc50:other,46,48
++household,dev,household:clapping,31,31
++household,dev,household:coughing,30,30
++household,dev,household:footsteps,31,31
++household,dev,household:keyboard_typing,31,31
++household,dev,household:laughing,30,31
++household,dev,household:mouse_click,31,31
++household,dev,mixed_knock@+0dB,0,32
++household,dev,mixed_knock@-6dB,0,32
++household,test,esc50:builtin_crying_baby,6,8
++household,test,esc50:builtin_dog_bark,8,8
++household,test,esc50:builtin_door_knock,5,8
++household,test,esc50:builtin_glass_breaking,7,8
++household,test,esc50:builtin_siren,7,8
++household,test,esc50:other,12,12
++household,test,household:clapping,7,7
++household,test,household:coughing,8,8
++household,test,household:footsteps,7,7
++household,test,household:keyboard_typing,7,7
++household,test,household:laughing,8,8
++household,test,household:mouse_click,7,7
++household,test,mixed_knock@+0dB,0,8
++household,test,mixed_knock@-6dB,1,8
++household+noisy,dev,esc50:builtin_crying_baby,31,32
++household+noisy,dev,esc50:builtin_dog_bark,31,32
++household+noisy,dev,esc50:builtin_door_knock,30,32
++household+noisy,dev,esc50:builtin_glass_breaking,27,32
++household+noisy,dev,esc50:builtin_siren,28,32
++household+noisy,dev,esc50:other,46,48
++household+noisy,dev,household:clapping,31,31
++household+noisy,dev,household:coughing,30,30
++household+noisy,dev,household:footsteps,23,31
++household+noisy,dev,household:keyboard_typing,31,31
++household+noisy,dev,household:laughing,30,31
++household+noisy,dev,household:mouse_click,31,31
++household+noisy,dev,mixed_knock@+0dB,6,32
++household+noisy,dev,mixed_knock@-6dB,3,32
++household+noisy,test,esc50:builtin_crying_baby,6,8
++household+noisy,test,esc50:builtin_dog_bark,8,8
++household+noisy,test,esc50:builtin_door_knock,7,8
++household+noisy,test,esc50:builtin_glass_breaking,7,8
++household+noisy,test,esc50:builtin_siren,7,8
++household+noisy,test,esc50:other,12,12
++household+noisy,test,household:clapping,7,7
++household+noisy,test,household:coughing,8,8
++household+noisy,test,household:footsteps,7,7
++household+noisy,test,household:keyboard_typing,7,7
++household+noisy,test,household:laughing,8,8
++household+noisy,test,household:mouse_click,7,7
++household+noisy,test,mixed_knock@+0dB,4,8
++household+noisy,test,mixed_knock@-6dB,4,8

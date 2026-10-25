@@ -1,0 +1,10 @@
+metric,value
+chosen_cutoff,0.6
+dev_0.6_knocks_accepted,35
+dev_0.6_knocks_n,96
+dev_0.6_false_knocks,5
+dev_0.6_not_knock_n,361
+test_0.6_knocks_accepted,8
+test_0.6_knocks_n,24
+test_0.6_false_knocks,1
+test_0.6_not_knock_n,88

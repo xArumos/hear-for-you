@@ -20,6 +20,17 @@ Read before changing the stack, a model, or a constant. Add a new entry (newest 
 
 ## Log
 
+### 2026-10-25 — Door knocks: no knock-only cutoff, no retrain; never grouped (P1, issue #27)
+
+- **Knocks and glass breaking are never grouped** (with the smoke alarm). They are discrete, so a second knock
+  within 10 s is a new alert. Barking, sirens, crying and unknowns are still grouped.
+- **No door-knock-specific cutoff.** Measured in `eval/eval_knock.py`: every cutoff below 0.6 that catches more
+  dev knocks also adds dev false knocks, almost all footsteps; the choice rule (more knocks, no more false knocks)
+  keeps 0.6. Retraining with household negatives and noisy knocks makes the same trade on dev and costs glass
+  breaking, so the shipped model is unchanged. What would help: real knock and footstep recordings from the venue.
+- **`/detect` logs its reasoning** (scores, decision, why a clip was dropped, grouped or new) so a missed sound
+  can be diagnosed from the server log. IDs and numbers only.
+
 ### 2026-10-24 — Backend decides relevance before history (P1, issue #22)
 
 - **Unknown alerts need the describe model's relevance flag.** The describe call now returns JSON
