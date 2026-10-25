@@ -19,6 +19,7 @@ export class ListeningSession {
   private subscribers = new Set<() => void>();
   private enabled = false;
   private teaching = false;
+  private previewing = false;
   private controller: AbortController | null = null;
   private capture: CaptureSession | null = null;
   private recording: Promise<void> | null = null;
@@ -38,7 +39,7 @@ export class ListeningSession {
   }
   start = (): void => {
     this.enabled = true;
-    if (this.teaching) { this.update('teaching'); return; }
+    if (this.teaching || this.previewing) { this.update('teaching'); return; }
     this.launch();
   };
   stop = (): Promise<void> => {
@@ -49,13 +50,20 @@ export class ListeningSession {
   reconnect = (): void => { void this.stop(); this.start(); };
   setTeaching = (teaching: boolean): Promise<void> => {
     this.teaching = teaching;
-    if (teaching) {
+    return this.syncSuspension();
+  };
+  setPreviewing = (previewing: boolean): void => {
+    this.previewing = previewing;
+    void this.syncSuspension();
+  };
+  private syncSuspension(): Promise<void> {
+    if (this.teaching || this.previewing) {
       this.update(this.enabled ? 'teaching' : 'paused', this.state.error);
       return this.release();
     }
     if (this.enabled) this.launch();
     return this.cleanup;
-  };
+  }
   record = async <T>(task: () => Promise<T>): Promise<T> => {
     if (this.recording) throw new Error('A teaching recording is already active.');
     const released = this.setTeaching(true);
@@ -83,7 +91,7 @@ export class ListeningSession {
     void this.release();
   }
   private launch(): void {
-    if (this.controller || !this.enabled || this.teaching) return;
+    if (this.controller || !this.enabled || this.teaching || this.previewing) return;
     const controller = new AbortController();
     this.controller = controller;
     this.update('reconnecting');

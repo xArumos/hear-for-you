@@ -186,8 +186,8 @@ function Recording({ setScreen, index, saveRecording, record }: { setScreen:(s:S
       const result = await record(() => {
         if (controller.signal.aborted) throw new DOMException('Recording cancelled', 'AbortError')
         return recordMicrophoneClip(duration * 1000, {
-        signal: controller.signal, allowSilence: index === 3,
-        onProgress: fraction => setTime(Math.max(0, duration - Math.floor(fraction * duration))),
+          signal: controller.signal, allowSilence: index === 3,
+          onProgress: fraction => setTime(Math.max(0, duration - Math.floor(fraction * duration))),
         })
       })
       if (!controller.signal.aborted) setClip(result)
@@ -261,7 +261,7 @@ export default function App() {
     if (!alertPolicy.current.accept(result, [...builtinSounds, ...customSounds], performance.now())) return
     setDetection(result)
     setHistory(current => [{ ...result, at: new Date().toISOString() }, ...current.filter(event => event.event_id !== result.event_id)])
-  })
+  }, screen)
   const { setTeaching } = listening
   useEffect(() => { void setTeaching(screen === 'record') }, [screen, setTeaching])
 

@@ -4,7 +4,7 @@ import type { DetectResponse } from '../api/types';
 import { ListeningSession } from '../audio/listening-session';
 import { startMicrophoneListener } from '../audio/listener';
 
-export function useListening(onDetection: (result: DetectResponse) => void) {
+export function useListening(onDetection: (result: DetectResponse) => void, page: string) {
   const callback = useRef(onDetection);
   callback.current = onDetection;
   const [session] = useState(() => new ListeningSession({
@@ -14,10 +14,22 @@ export function useListening(onDetection: (result: DetectResponse) => void) {
     now: () => performance.now(),
   }));
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const syncPreviews = () => session.setPreviewing(
+    Array.from(document.querySelectorAll<HTMLAudioElement>('.playback audio'))
+      .some(audio => !audio.paused && !audio.ended && !audio.error),
+  );
+  // Removed/changed audio elements may not bubble pause events to document.
+  useEffect(syncPreviews, [page, session]);
   useEffect(() => {
     const stop = () => { void session.stop(); };
+    const preview = syncPreviews;
+    for (const event of ['play', 'pause', 'ended', 'error']) document.addEventListener(event, preview, true);
     window.addEventListener('pagehide', stop);
-    return () => { window.removeEventListener('pagehide', stop); stop(); };
+    return () => {
+      for (const event of ['play', 'pause', 'ended', 'error']) document.removeEventListener(event, preview, true);
+      window.removeEventListener('pagehide', stop);
+      stop();
+    };
   }, [session]);
   return { ...state, start: session.start, stop: session.stop, reconnect: session.reconnect, setTeaching: session.setTeaching, record: session.record };
 }

@@ -102,3 +102,34 @@ Repeat sustained recordings and distinct events inside/outside the grouping gap.
 Check disabled categories and subsequent re-enabling. Inspect backend History
 separately: the frontend cannot undo its pre-existing insertion on /detect.
 No house-wide or distance accuracy is established by the synthetic browser tests.
+
+
+## Listening across pages
+
+With the isolated Chrome debugger and frontend running, execute
+`node tests/browser-global-listening.mjs`. It opens and closes its own test tab,
+uses generated microphone audio and controlled API responses, and checks:
+
+- OFF on load/reload; one capture across Home, Your Sounds, History, Teach, Login
+  and Listen; returning shows the actual active state.
+- Actual onset capture produces the existing alert and local History off Listen.
+- Teach recording/review releases detection capture, preserves a valid three-second
+  recording, and resumes prior listening on leaving the recording screen.
+- Playback previews temporarily suspend detection so teaching audio cannot alert.
+- Disabled categories stay suppressed off Listen; Stop releases tracks and ignores
+  pending API responses; a device interruption changes global status to OFF.
+
+Unit tests also cover pending permission grants, serialized teardown/reacquisition,
+recording cancellation handoff, API retry limits and preview/recording overlap.
+This is browser-generated audio, not physical microphone or Gemini validation.
+
+On physical desktop and phone browsers (including Safari), start listening and
+navigate every page without additional permission prompts. Trigger a safe, known
+sound while viewing History or Your Sounds and check the alert and one History
+entry. Return to Listen and stop; verify the browser microphone indicator turns
+off. Repeat with Teach capture, preview playback, cancellation and an initial
+listening state of OFF. Confirm only previously enabled listening resumes. Revoke
+microphone permission, disconnect the device, lock the screen or switch tabs and
+check the reported state when returning; if the browser interrupts capture,
+restart explicitly. Browser/OS restrictions still apply outside the visible site.
+No styling, microphone gain or detection thresholds changed.

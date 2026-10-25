@@ -109,3 +109,19 @@ test('permanent API failures stop; transient failures respect retry delay and re
   h.clip(); await flush(); assert.equal(h.session.getSnapshot().status, 'paused');
   assert.equal(h.counts().closes, 1);
 });
+
+
+test('preview playback pauses detection independently of recording and never enables an OFF session', async () => {
+  const h = setup();
+  h.session.setPreviewing(true); h.session.setPreviewing(false); await flush();
+  assert.equal(h.counts().opens, 0);
+  h.session.start(); await flush();
+  h.session.setPreviewing(true); await flush();
+  assert.equal(h.counts().closes, 1);
+  await h.session.setTeaching(true); h.session.setPreviewing(false); await flush();
+  assert.equal(h.counts().opens, 1);
+  await h.session.setTeaching(false); await flush();
+  assert.equal(h.counts().opens, 2);
+  h.session.setPreviewing(true); await h.session.stop(); h.session.setPreviewing(false); await flush();
+  assert.equal(h.counts().opens, 2);
+});
