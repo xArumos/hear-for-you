@@ -32,9 +32,7 @@ export class AlertPolicy {
       // Mirror existing backend acceptance rules; never raise a global threshold.
       // Taught confidence is a threshold-relative mapping, not a calibrated probability.
       if (result.kind === 'taught' && confidence < 0.5) return false;
-      // The backend checks p > 0.6 before rounding to two decimals: an admitted
-      // probability just above 0.6 can arrive as 0.60. Preserve that decision.
-      if (result.kind === 'builtin' && result.sound_id !== 'builtin_smoke_alarm' && confidence < 0.6) return false;
+      if (result.kind === 'builtin' && result.sound_id !== 'builtin_smoke_alarm' && confidence <= 0.6) return false;
       if (result.sound_id && sustained.has(result.sound_id)) {
         const previous = this.lastObserved.get(result.sound_id);
         this.lastObserved.set(result.sound_id, now);

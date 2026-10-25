@@ -32,15 +32,6 @@ unless the normal backend response passes the existing alert policy. This reduce
 missed brief events without changing microphone sensitivity, backend thresholds,
 the API contract or the UI.
 
-### 2026-10-25 — Preserve backend acceptance after confidence rounding (P2)
-
-The backend still requires raw built-in probability > 0.6. It rounds accepted
-probabilities to two decimals, so frontend admission now allows a wire value of
-0.60 rather than rejecting it. Enabled-category and other relevance checks stay
-in place. This corrects a serialization boundary mismatch, not global sensitivity.
-See `DOOR_KNOCK_INVESTIGATION.md` for real-audio results, existing typing false
-alerts, and the P1 handoff in issue #27. No backend thresholds were changed.
-
 ### 2026-10-24 — Bundle the existing frontend for foreground iOS use (P2, user approved)
 
 Capacitor 8.5.3 core/CLI/iOS were already in web/package.json and its lockfile.
