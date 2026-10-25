@@ -243,7 +243,7 @@ export default function App() {
   const [dark, setDark] = useState(false)
   const [clips, setClips] = useState<(Blob|null)[]>([null, null, null, null])
   const recordings = clips.map(Boolean)
-  const [name, setName] = useState('Door knock')
+  const [name, setName] = useState('')
   const [selected, setSelected] = useState<IconKey>('door')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string|null>(null)
