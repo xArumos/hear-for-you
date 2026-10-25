@@ -102,6 +102,9 @@ def test_taught_models_skips_disabled(db: str) -> None:
     off = add_knock(db, "Off")
     store.update_sound(str(off["sound_id"]), enabled=False, db_path=db)
     assert [m.sound_id for m in store.taught_models(db)] == [keep["sound_id"]]
+    every = store.taught_models(db, include_disabled=True)
+    assert [(m.sound_id, m.enabled) for m in every] == [(keep["sound_id"], True), (off["sound_id"], False)]
+    assert all(len(m.room) for m in every)
 
 
 def test_update_taught_sound(db: str) -> None:

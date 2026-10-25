@@ -7,7 +7,7 @@ import pytest
 import soundfile as sf
 from fastapi.testclient import TestClient
 
-from app import detectors, gemini, ratelimit, store
+from app import detectors, gemini, ongoing, ratelimit, store
 from app.errors import UpstreamError
 from app.main import app
 
@@ -49,6 +49,12 @@ def reset_limiters() -> None:
     """Each test starts with empty rate-limit windows so tests don't throttle each other."""
     ratelimit.detect_limiter.reset()
     ratelimit.describe_limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+def reset_ongoing() -> None:
+    """Each test starts with no open ongoing-event groups."""
+    ongoing.events.reset()
 
 
 @pytest.fixture(autouse=True)

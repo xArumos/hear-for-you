@@ -93,8 +93,30 @@ def test_smoke_alarm_ignores_rate_limit_and_outages(
         assert post_detect(client, alarm_wav()).json()["sound_id"] == "builtin_smoke_alarm"
 
 
-def test_disabled_smoke_alarm_falls_through(client: TestClient, embed_calls: list[bytes]) -> None:
+def test_disabled_smoke_alarm_is_not_unknown(
+    client: TestClient, embed_calls: list[bytes], monkeypatch: pytest.MonkeyPatch
+) -> None:
     store.update_sound("builtin_smoke_alarm", enabled=False)
-    body = post_detect(client, alarm_wav(), level_db="-40").json()
+    monkeypatch.setattr(gemini, "describe_relevance", lambda wav: pytest.fail("should not describe"))
+    body = post_detect(client, alarm_wav(), level_db="-6").json()
     assert body["kind"] == "none"
-    assert len(embed_calls) == 1
+    assert len(embed_calls) == 1  # still checks for an enabled sound sounding at the same time
+    assert store.list_events() == []
+
+
+def test_disabled_smoke_alarm_still_lets_taught_match(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store.update_sound("builtin_smoke_alarm", enabled=False)
+    vec = np.zeros(768, dtype=np.float32)
+    vec[0] = 1.0
+    sound_id = store.add_sound("Kettle", "kettle", vec, np.stack([np.roll(vec, 5)]), 0.6)["sound_id"]
+    monkeypatch.setattr(gemini, "embed_audio", lambda wav: vec)
+    assert post_detect(client, alarm_wav()).json()["sound_id"] == sound_id
+
+
+def test_smoke_alarm_is_never_grouped(client: TestClient, embed_calls: list[bytes]) -> None:
+    first = post_detect(client, alarm_wav()).json()
+    second = post_detect(client, alarm_wav()).json()
+    assert first["event_id"] != second["event_id"]
+    assert len(store.list_events()) == 2

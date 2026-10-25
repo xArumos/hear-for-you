@@ -1,8 +1,10 @@
 """The only module that talks to Gemini. 10 s timeout, one retry on 429/5xx/timeout."""
 
+import json
 import logging
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TypeVar
 
 import httpx
@@ -19,9 +21,24 @@ TIMEOUT_MS = 10_000
 RETRY_DELAY_S = 0.5
 DEFAULT_RETRY_AFTER_MS = 1_000
 
-DESCRIBE_PROMPT = (
-    "Describe this sound in one short, plain sentence for someone who cannot hear it. "
-    "Name the likely source. No preamble."
+RELEVANCE_PROMPT = (
+    "You help a deaf person notice sounds at home. Listen to this clip. "
+    "In description, describe the sound in one short, plain sentence for someone who cannot hear it. "
+    "Name the likely source. No preamble. "
+    "Set relevant to false only if the clip holds nothing but routine background sound: speech or "
+    "conversation, typing, mouse clicks, tapping on a laptop or desk, footsteps, fans, air conditioning, "
+    "or ordinary household hum. Set relevant to true if any sound in the clip may need attention, even "
+    "when mixed with speech or other background noise: alarms or beeping, doorbells, knocking, glass "
+    "breaking, crashes or falls, a crying baby, shouting or distress, running water, appliance chimes, "
+    "sirens, or a barking dog. If unsure, set relevant to true."
+)
+RELEVANCE_SCHEMA = types.Schema(
+    type=types.Type.OBJECT,
+    properties={
+        "relevant": types.Schema(type=types.Type.BOOLEAN),
+        "description": types.Schema(type=types.Type.STRING),
+    },
+    required=["relevant", "description"],
 )
 MAX_DESCRIPTION_CHARS = 80
 
@@ -100,20 +117,40 @@ def _shorten(text: str) -> str:
     return cut + "…"
 
 
-def describe_audio(wav: bytes) -> str | None:
-    """One plain sentence about an unknown sound from the describe model, or None if the call fails."""
+@dataclass(frozen=True)
+class Described:
+    relevant: bool  # the describe model's judgement, not a calibrated confidence
+    description: str
+
+
+def describe_relevance(wav: bytes) -> Described | None:
+    """Ask the describe model what an unknown sound is and whether it may need attention.
+
+    None if the call fails or the reply isn't the JSON we asked for.
+    """
     try:
         client = _get_client()
 
         def call() -> types.GenerateContentResponse:
             return client.models.generate_content(
                 model=settings.describe_model,
-                contents=[DESCRIBE_PROMPT, types.Part.from_bytes(data=wav, mime_type="audio/wav")],
+                contents=[RELEVANCE_PROMPT, types.Part.from_bytes(data=wav, mime_type="audio/wav")],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json", response_schema=RELEVANCE_SCHEMA
+                ),
             )
 
         response = _call_with_retry(call)
     except ApiError as exc:
         log.warning("describe failed: %s", exc.code)
         return None
-    text = (response.text or "").strip()
-    return _shorten(text) if text else None
+    try:
+        reply = json.loads(response.text or "")
+        relevant, text = reply["relevant"], reply["description"]
+    except (ValueError, TypeError, KeyError):
+        log.warning("describe failed: malformed_reply")
+        return None
+    if not isinstance(relevant, bool) or not isinstance(text, str) or not text.strip():
+        log.warning("describe failed: malformed_reply")
+        return None
+    return Described(relevant, _shorten(text))

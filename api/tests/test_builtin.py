@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from app import detectors, gemini, store
+from app import detectors, gemini, ratelimit, store
 from tests.conftest import make_wav
 from tests.test_routes import post_detect
 from tests.test_teach import basis
@@ -58,10 +58,21 @@ def test_builtin_no_match(
     assert store.list_events() == []
 
 
-def test_disabled_builtin_is_skipped(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_disabled_builtin_is_not_unknown(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     store.update_sound("builtin_dog_bark", enabled=False)
     install(monkeypatch, [0.9, 0.05, 0.05])
+    monkeypatch.setattr(gemini, "describe_relevance", lambda wav: pytest.fail("should not describe"))
+    assert post_detect(client, make_wav(), level_db="-6").json()["kind"] == "none"
+    assert store.list_events() == []
+
+
+def test_reenabled_builtin_matches_again(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    install(monkeypatch, [0.9, 0.05, 0.05])
+    store.update_sound("builtin_dog_bark", enabled=False)
     assert post_detect(client, make_wav()).json()["kind"] == "none"
+    store.update_sound("builtin_dog_bark", enabled=True)
+    ratelimit.detect_limiter.reset()
+    assert post_detect(client, make_wav()).json()["sound_id"] == "builtin_dog_bark"
 
 
 def test_taught_beats_builtin(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
