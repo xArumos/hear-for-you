@@ -12,7 +12,7 @@ const completeRecordings = Array.from({ length: 4 }, () => ({
 test('a fresh Teach draft starts blank and remains a controlled App-level field', () => {
   assert.match(appSource, /const \[name, setName\] = useState\(''\)/);
   assert.doesNotMatch(appSource, /useState\('Door knock'\)/);
-  assert.match(appSource, /<input id="soundName" value=\{name\} onChange=\{e=>setName\(e\.target\.value\)\} \/>/);
+  assert.match(appSource, /<input id="soundName" placeholder="Enter sound name" value=\{name\} onChange=\{e=>setName\(e\.target\.value\)\} \/>/);
   assert.match(appSource, /<Teach [^>]*name=\{name\} setName=\{setName\}/);
 });
 
