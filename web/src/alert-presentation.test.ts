@@ -30,6 +30,17 @@ test('a taught alert reuses its selected custom icon and pink presentation', () 
   assert.match(styles, /\.alert-screen\.taught\{background:var\(--light-violet\);color:var\(--dark-blue\)\}/);
 });
 
+test('built-in icons are blue while taught icons stay pink across sound lists and History', () => {
+  const styles = readFileSync(new URL('./index.css', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+
+  assert.match(styles, /\.sound-icon\.builtin \{ background:var\(--indigo\);color:var\(--honeydew\) \}/);
+  assert.match(styles, /\.event-icon\.taught\{background:var\(--light-violet\);color:var\(--dark-blue\)\}/);
+  assert.match(app, /className=\{`sound-icon \$\{sound\.kind\}`\}/);
+  assert.match(app, /className="sound-icon builtin"/);
+  assert.match(app, /className="sound-icon taught"/);
+});
+
 test('built-in and unknown alerts keep their existing presentations', () => {
   assert.deepEqual(alertPresentation(event({}), DEFAULT_BUILTIN_SOUNDS), { className: 'recognized', icon: 'dog' });
   assert.deepEqual(alertPresentation(event({
