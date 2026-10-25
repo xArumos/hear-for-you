@@ -52,8 +52,15 @@ Form fields: `clip` (wav, 3.0 s), `level_db` (number, the clip's peak loudness i
 
 - `kind` is one of `"builtin" | "taught" | "unknown" | "none"`.
   - `builtin` / `taught`: matched; `label`, `sound_id` and `confidence` are set. The frontend shows the Alert screen.
-  - `unknown`: loud but unmatched; `description` is a one-line string from the describe model, Gemini 3.5 Flash-Lite by default (or `null` if the describe call failed); `label` is `null`. The frontend shows "What was that?".
-  - `none`: not loud enough to describe and not matched. The frontend shows nothing.
+  - `unknown`: loud, unmatched, and judged relevant by the describe model (Gemini 3.5 Flash-Lite by default); `description` is a one-line string, never `null`; `label` is `null`. The frontend shows "What was that?".
+  - `none`: no alert. `label`, `sound_id`, `confidence` and `description` are all `null`, and nothing is saved. Returned when the clip is not matched by an enabled sound and any of these is true:
+    - it is not loud enough to describe;
+    - a disabled sound matched;
+    - the describe cap was reached (one call every 10 s);
+    - the describe call failed or its reply was malformed;
+    - the describe model judged it routine background sound.
+
+    The frontend shows nothing.
 - `confidence` is a calibrated value in [0, 1]. Built-in sound IDs start with `builtin_`.
 - Every `detect` call that is not `none` is saved to history.
 
