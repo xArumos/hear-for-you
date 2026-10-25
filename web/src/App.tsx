@@ -8,6 +8,7 @@ import { getSounds, teachSound, updateSound, deleteSound } from './api/client'
 
 import { useListening, type GlobalListening } from './hooks/useListening'
 import { AlertPolicy } from './alert-policy'
+import { filterHistoryEvents, historyRangeError } from './history-filter'
 import type { DetectResponse } from './api/types'
 
 type Screen = 'home' | 'listen' | 'teach' | 'record' | 'history' | 'sounds' | 'account' | 'auth' | 'recognized' | 'unknown' | 'attention'
@@ -222,20 +223,18 @@ function MySounds({ builtinSounds, customSounds, toggleBuiltin, deleteCustom, sa
 
 function History({ events }: { events: GuestHistoryEvent[] }) {
   const [soundFilter,setSoundFilter]=useState('All')
-  const [dateFilter,setDateFilter]=useState('All')
+  const [startDate,setStartDate]=useState('')
+  const [endDate,setEndDate]=useState('')
   const [limit,setLimit]=useState(5)
 
-  const filtered = events.filter((event) => {
-    const matchesSound = soundFilter === 'All' || event.label === soundFilter
-    const matchesDate = dateFilter === 'All' || new Date(event.at).toDateString() === new Date(dateFilter).toDateString()
-    return matchesSound && matchesDate
-  })
+  const rangeError = historyRangeError(startDate, endDate)
+  const filtered = filterHistoryEvents(events, { startDate, endDate, sound: soundFilter })
 
   if (events.length === 0) {
     return <div className="page"><div className="title-row"><div><p className="eyebrow">DETECTION HISTORY</p><h1>History</h1><p>Your genuine detections appear here after a matching event is confirmed.</p></div></div><section className="card history-empty"><h2>No detections yet</h2><p>New detections will appear here after a sound is recognized and enabled.</p></section></div>
   }
 
-  return <div className="page"><div className="title-row"><div><p className="eyebrow">DETECTION HISTORY</p><h1>History</h1><p>Only confirmed detections are stored locally.</p></div></div><section className="card history-filters"><label>Date<select value={dateFilter} onChange={e=>setDateFilter(e.target.value)}><option value="All">All</option>{Array.from(new Set(events.map((event) => event.at.slice(0, 10)))).map((date) => <option key={date} value={date}>{date}</option>)}</select></label><label>Sound<select value={soundFilter} onChange={e=>setSoundFilter(e.target.value)}><option value="All">All</option>{Array.from(new Set(events.map((event) => event.label).filter(Boolean))).map((label) => <option key={label as string} value={label as string}>{label as string}</option>)}</select></label><button className="secondary" onClick={()=>{setDateFilter('All');setSoundFilter('All')}}>Clear filters</button></section><section className="card history-card"><div className="history-head event-only"><span>Date and time</span><span>Original detected label</span><span>Status</span></div>{filtered.slice(0, limit).map((event) => <div className="history-row event-only" key={event.event_id}><time>{new Date(event.at).toLocaleString()}</time><span className="event-name"><span className={`event-icon ${event.kind}`}><Icon name={event.kind === 'unknown' ? 'warning' : event.kind === 'builtin' ? (event.label?.includes('dog') ? 'dog' : 'generic') : 'voice'}/></span><span><strong>{event.label ?? 'Sound detected'}</strong><small>Stored locally</small></span></span><span><b className={`type ${event.kind}`}>{event.kind}</b></span></div>)}{filtered.length === 0 && <div className="history-empty"><h2>No matching results</h2><p>Try clearing one or more filters.</p></div>}</section>{limit < filtered.length && <button className="secondary load-more" onClick={()=>setLimit(limit + 5)}>Load more history</button>}</div>
+  return <div className="page"><div className="title-row"><div><p className="eyebrow">DETECTION HISTORY</p><h1>History</h1><p>Only confirmed detections appear in History.</p></div></div><section className="card history-filters"><label>Start date<input type="date" value={startDate} max={endDate || undefined} onChange={e=>setStartDate(e.target.value)} aria-invalid={!!rangeError}/></label><label>End date<input type="date" value={endDate} min={startDate || undefined} onChange={e=>setEndDate(e.target.value)} aria-invalid={!!rangeError}/></label><label>Sound<select value={soundFilter} onChange={e=>setSoundFilter(e.target.value)}><option value="All">All</option>{Array.from(new Set(events.map((event) => event.label).filter(Boolean))).map((label) => <option key={label as string} value={label as string}>{label as string}</option>)}</select></label><button className="secondary" onClick={()=>{setStartDate('');setEndDate('');setSoundFilter('All')}}>Clear filters</button>{rangeError && <p className="history-filter-error" role="alert">{rangeError}</p>}</section><section className="card history-card"><div className="history-head event-only"><span>Date and time</span><span>Original detected label</span><span>Status</span></div>{filtered.slice(0, limit).map((event) => <div className="history-row event-only" key={event.event_id}><time>{new Date(event.at).toLocaleString()}</time><span className="event-name"><span className={`event-icon ${event.kind}`}><Icon name={event.kind === 'unknown' ? 'warning' : event.kind === 'builtin' ? (event.label?.includes('dog') ? 'dog' : 'generic') : 'voice'}/></span><span><strong>{event.label ?? 'Sound detected'}</strong></span></span><span><b className={`type ${event.kind}`}>{event.kind}</b></span></div>)}{filtered.length === 0 && <div className="history-empty"><h2>No matching results</h2><p>Try clearing one or more filters.</p></div>}</section>{limit < filtered.length && <button className="secondary load-more" onClick={()=>setLimit(limit + 5)}>Load more history</button>}</div>
 }
 
 export default function App() {
