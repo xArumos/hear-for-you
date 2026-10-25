@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "The API rate limit was exceeded.",
+    "retry_after_ms": 1000
+  }
+}

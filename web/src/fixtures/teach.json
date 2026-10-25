@@ -1,0 +1,11 @@
+{
+  "sound_id": "snd_3c1d",
+  "name": "Door knock",
+  "icon": "door",
+  "self_check": {
+    "passed": true,
+    "score": 0.88,
+    "threshold": 0.71
+  },
+  "latency_ms": 2410
+}

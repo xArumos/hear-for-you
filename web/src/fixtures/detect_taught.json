@@ -1,0 +1,9 @@
+{
+  "event_id": "evt_8f2a",
+  "kind": "taught",
+  "label": "Door knock",
+  "sound_id": "snd_3c1d",
+  "confidence": 0.94,
+  "description": null,
+  "latency_ms": 812
+}

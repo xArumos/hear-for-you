@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "bad_audio",
+    "message": "Clip must be 16 kHz mono WAV, 3.0 s."
+  }
+}
